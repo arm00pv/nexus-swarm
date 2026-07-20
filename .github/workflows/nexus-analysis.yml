@@ -1,0 +1,35 @@
+name: NEXUS Code Analysis
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: NEXUS Code Analysis
+        run: |
+          echo "# NEXUS Swarm Analysis"
+          echo "====================="
+          echo "This push triggers NEXUS autonomous code analysis."
+          echo "The NEXUS API runs on our GPU node at https://marquezhv.com"
+          echo ""
+          echo "Analysis includes:"
+          echo "  - 7-agent swarm (SCOUT, ARCHITECT, FORGE, JUDGE, PROVER, GUARDIAN, SCRIBE)"
+          echo "  - Mamba-3 SSM GPU scanner"
+          echo "  - Lean4 formal verification"
+          echo "  - Conscience anti-hallucination"
+          echo "  - Darwin-Godel self-improvement"
+
+      - name: Trigger NEXUS Analysis
+        run: |
+          curl -s -X POST "https://marquezhv.com/api/nexus/github" \
+            -H "Content-Type: application/json" \
+            -d "{\"repo\": \"$GITHUB_REPOSITORY\", \"path\": \"\", \"branch\": \"main\"}" || true
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}

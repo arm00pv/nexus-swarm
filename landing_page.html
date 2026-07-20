@@ -79,7 +79,6 @@ footer{text-align:center;padding:40px 0;color:#555;font-size:.85em;border-top:1p
 <a href="#how">How It Works</a>
 <a href="#agents">Agents</a>
 <a href="#pricing">Pricing</a>
-<a href="https://github.com/arm00pv/nexus-swarm">GitHub</a>
 </div>
 <a class="cta" href="#audit">Start Free Audit</a>
 </nav>
@@ -172,7 +171,7 @@ footer{text-align:center;padding:40px 0;color:#555;font-size:.85em;border-top:1p
 <footer>
 <p>⚡ NEXUS — Autonomous AI Code Audit with Formal Verification</p>
 <p style="margin-top:8px">Formal Verification · Anti-Hallucination · Self-Improving · Autonomous · Edge Computing</p>
-<p style="margin-top:8px"><a href="https://github.com/arm00pv/nexus-swarm" style="color:#00d4ff">GitHub</a> · <a href="https://marquezhv.com/api/nexus/" style="color:#00d4ff">API</a> · <a href="https://marquezhv.com/api/nexus/health" style="color:#00d4ff">Status</a></p>
+<p style="margin-top:8px"><a href="https://marquezhv.com/api/nexus/health" style="color:#00d4ff">System Status</a></p>
 </footer>
 </div>
 
@@ -184,43 +183,13 @@ footer{text-align:center;padding:40px 0;color:#555;font-size:.85em;border-top:1p
 </div>
 
 <script>
-async function startAudit() {
+function startAudit() {
 const repo = document.getElementById('repo-url').value.trim();
 if (!repo) { alert('Enter a GitHub repo URL'); return; }
-const cleanRepo = repo.replace('https://github.com/', '').replace('http://github.com/', '');
 const modal = document.getElementById('result-modal');
 const content = document.getElementById('result-content');
 modal.classList.add('active');
-content.innerHTML = '<p style="text-align:center;color:#00d4ff">⏳ 7 agents are analyzing your code...<br><br>SCOUT → ARCHITECT → FORGE → JUDGE → PROVER → GUARDIAN → SCRIBE<br><br>This may take 2-5 minutes.</p>';
-
-try {
-const resp = await fetch('https://marquezhv.com/api/nexus/github', {
-method: 'POST',
-headers: {'Content-Type': 'application/json'},
-body: JSON.stringify({repo: cleanRepo, branch: 'main'})
-});
-const data = await resp.json();
-if (data.error) {
-content.innerHTML = '<p style="color:#ff4444">Error: ' + data.error + '</p><p>Try: github.com/arm00pv/propkeep</p>';
-return;
-}
-if (data.status === 'queued') {
-content.innerHTML = '<div style="text-align:center"><p style="color:#00d4ff;font-size:1.2em">✅ Audit Queued!</p><p style="color:#888;margin:16px 0">' + data.message + '</p><p style="color:#888">Audit ID: <code>' + data.audit_id + '</code></p><p style="margin-top:20px"><a href="' + data.check_status + '" style="color:#00d4ff">Check Status →</a></p></div>';
-} else if (data.summary) {
-let html = '<div class="score">' + (data.summary?.judge_score || 0) + '/100</div>';
-html += '<p style="text-align:center;color:#888;margin-bottom:20px">JUDGE Score · ' + (data.summary?.verdict || 'unknown') + '</p>';
-html += '<p><strong>Issues found: ' + (data.summary?.issues_found || 0) + '</strong></p><br>';
-if (data.issues && data.issues.length > 0) {
-data.issues.forEach(issue => {
-const sev = (issue.severity || 'low').toLowerCase();
-html += '<div class="issue ' + sev + '"><strong>[' + sev.toUpperCase() + ']</strong> Line ' + (issue.line || '?') + ': ' + (issue.description || '') + '</div>';
-});
-}
-content.innerHTML = html;
-}
-} catch(e) {
-content.innerHTML = '<p style="color:#ff4444">Connection error. The NEXUS API may be processing another audit.</p>';
-}
+content.innerHTML = '<div style="text-align:center;padding:40px 0"><p style="color:#00d4ff;font-size:1.5em;font-weight:700">🚀 NEXUS is in development</p><p style="color:#888;margin:20px 0;max-width:400px;margin-left:auto;margin-right:auto">The autonomous code audit system is operational internally. Public access will be available once the product is ready for release.</p><p style="color:#666;font-size:0.9em">Current capabilities: 7-agent swarm · formal verification · anti-hallucination · self-improving</p><button onclick="document.getElementById(\'result-modal\').classList.remove(\'active\')" style="margin-top:24px;padding:12px 32px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);border-radius:8px;color:#00d4ff;cursor:pointer">Close</button></div>';
 }
 document.addEventListener('keydown', e => { if(e.key === 'Escape') document.getElementById('result-modal').classList.remove('active'); });
 </script>

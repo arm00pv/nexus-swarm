@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS — AI Code Audit & Formal Verification</title>
+<meta name="description" content="Submit your GitHub repo. Get a 7-agent AI security audit with Lean4 formal verification, anti-hallucination guarantees, and auto-PR fixes. Zero false positives.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#0a0a0f;color:#e0e0e0;overflow-x:hidden}
+.mono{font-family:'JetBrains Mono',monospace}
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+nav .logo{font-size:1.5em;font-weight:900;background:linear-gradient(135deg,#00d4ff,#7b2ff7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+nav .links a{color:#888;text-decoration:none;margin-left:24px;font-size:.9em}
+nav .links a:hover{color:#fff}
+nav .cta{background:linear-gradient(135deg,#00d4ff,#7b2ff7);color:#000;padding:10px 24px;border-radius:8px;font-weight:700;text-decoration:none;font-size:.9em}
+.hero{text-align:center;padding:80px 0 60px}
+.hero h1{font-size:4em;font-weight:900;line-height:1.1;margin-bottom:20px}
+.hero h1 .grad{background:linear-gradient(135deg,#00d4ff,#7b2ff7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:1.3em;color:#888;max-width:700px;margin:0 auto 40px}
+.hero .audit-form{max-width:600px;margin:0 auto;display:flex;gap:12px}
+.hero .audit-form input{flex:1;padding:16px 20px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;font-size:1em}
+.hero .audit-form input::placeholder{color:#555}
+.hero .audit-form input:focus{outline:none;border-color:#00d4ff}
+.hero .audit-form button{padding:16px 32px;background:linear-gradient(135deg,#00d4ff,#7b2ff7);color:#000;border:none;border-radius:10px;font-weight:700;font-size:1em;cursor:pointer;white-space:nowrap}
+.hero .audit-form button:hover{transform:scale(1.02);box-shadow:0 4px 20px rgba(0,212,255,0.3)}
+.hero .badge{display:inline-block;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);border-radius:20px;padding:6px 16px;font-size:.8em;color:#00d4ff;margin-top:20px}
+.agents{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;padding:40px 0}
+.agent{text-align:center;padding:20px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;transition:all .3s}
+.agent:hover{border-color:rgba(0,212,255,0.4);transform:translateY(-4px);background:rgba(0,212,255,0.05)}
+.agent .icon{font-size:2em;margin-bottom:8px}
+.agent .name{font-weight:700;font-size:.95em}
+.agent .role{font-size:.75em;color:#888;margin-top:4px}
+.agent .model{font-size:.65em;color:#555;margin-top:2px}
+.features{padding:60px 0}
+.features h2{text-align:center;font-size:2.5em;margin-bottom:40px;font-weight:800}
+.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.feature{padding:24px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px}
+.feature h3{font-size:1.1em;margin-bottom:8px;color:#00d4ff}
+.feature p{color:#888;font-size:.9em;line-height:1.6}
+.pricing{padding:60px 0}
+.pricing h2{text-align:center;font-size:2.5em;margin-bottom:40px;font-weight:800}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:900px;margin:0 auto}
+.price-card{padding:32px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:16px;text-align:center}
+.price-card.popular{border-color:#00d4ff;background:rgba(0,212,255,0.05);position:relative}
+.price-card.popular::before{content:'MOST POPULAR';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#00d4ff;color:#000;padding:4px 12px;border-radius:20px;font-size:.7em;font-weight:700}
+.price-card .tier{font-size:.8em;color:#888;text-transform:uppercase;letter-spacing:2px}
+.price-card .price{font-size:3em;font-weight:900;margin:12px 0}
+.price-card .price span{font-size:.4em;color:#888;font-weight:400}
+.price-card ul{list-style:none;text-align:left;margin:20px 0}
+.price-card ul li{padding:6px 0;color:#aaa;font-size:.9em}
+.price-card ul li::before{content:'✓ ';color:#00d4ff}
+.price-card .btn{display:block;padding:14px;border-radius:10px;text-decoration:none;font-weight:700;margin-top:12px}
+.price-card .btn.free{background:rgba(255,255,255,0.1);color:#fff}
+.price-card .btn.paid{background:linear-gradient(135deg,#00d4ff,#7b2ff7);color:#000}
+.stats{padding:40px 0;text-align:center}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.stat .num{font-size:2.5em;font-weight:900;color:#00d4ff}
+.stat .label{color:#888;font-size:.85em}
+footer{text-align:center;padding:40px 0;color:#555;font-size:.85em;border-top:1px solid rgba(255,255,255,0.05)}
+.result-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center;z-index:9999}
+.result-modal.active{display:flex}
+.result-box{background:#111;border:1px solid rgba(0,212,255,0.3);border-radius:16px;padding:40px;max-width:700px;max-height:80vh;overflow-y:auto}
+.result-box h2{color:#00d4ff;margin-bottom:20px}
+.result-box .issue{padding:12px;border-left:3px solid #ff4444;margin-bottom:8px;background:rgba(255,68,68,0.05)}
+.result-box .issue.high{border-color:#ff8800;background:rgba(255,136,0,0.05)}
+.result-box .issue.medium{border-color:#ffcc00;background:rgba(255,204,0,0.05)}
+.result-box .issue.low{border-color:#88cc00;background:rgba(136,204,0,0.05)}
+.result-box .score{font-size:3em;font-weight:900;text-align:center;margin:20px 0}
+@media(max-width:768px){.hero h1{font-size:2.5em}.agents{grid-template-columns:repeat(3,1fr)}.feature-grid,.pricing-grid{grid-template-columns:1fr}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+<nav>
+<div class="logo">⚡ NEXUS</div>
+<div class="links">
+<a href="#how">How It Works</a>
+<a href="#agents">Agents</a>
+<a href="#pricing">Pricing</a>
+<a href="https://github.com/arm00pv/nexus-swarm">GitHub</a>
+</div>
+<a class="cta" href="#audit">Start Free Audit</a>
+</nav>
+
+<div class="hero">
+<h1>Your code.<br><span class="grad">Audited by 7 AI agents.</span></h1>
+<p>Submit a GitHub repo. Get a complete security audit with formally-verified fixes, anti-hallucination guarantees, and auto-generated pull requests.</p>
+
+<div class="audit-form" id="audit-form">
+<input type="text" id="repo-url" placeholder="github.com/yourname/your-repo">
+<button onclick="startAudit()">🔍 Audit My Code</button>
+</div>
+<div class="badge">✦ Powered by Mamba-3 SSM GPU + Lean4 + Conscience + Darwin-Gödel</div>
+</div>
+
+<div class="stats">
+<div class="stats-grid">
+<div class="stat"><div class="num">7</div><div class="label">AI Agents</div></div>
+<div class="stat"><div class="num">378K</div><div class="label">ALEPH Edges</div></div>
+<div class="stat"><div class="num">50K</div><div class="label">Verified Claims</div></div>
+<div class="stat"><div class="num">$0</div><div class="label">Cloud Cost</div></div>
+</div>
+</div>
+
+<div id="agents" class="agents">
+<div class="agent"><div class="icon">🔍</div><div class="name">SCOUT</div><div class="role">Fast scanner</div><div class="model">qwen3.5:0.8b</div></div>
+<div class="agent"><div class="icon">🏗️</div><div class="name">ARCHITECT</div><div class="role">Deep analysis</div><div class="model">qwen3.5:4b</div></div>
+<div class="agent"><div class="icon">🔨</div><div class="name">FORGE</div><div class="role">Code generation</div><div class="model">qwen3.5:4b</div></div>
+<div class="agent"><div class="icon">⚖️</div><div class="name">JUDGE</div><div class="role">Fix evaluation</div><div class="model">qwen3.5:4b</div></div>
+<div class="agent"><div class="icon">📐</div><div class="name">PROVER</div><div class="role">Formal proof</div><div class="model">Lean4</div></div>
+<div class="agent"><div class="icon">🛡️</div><div class="name">GUARDIAN</div><div class="role">Anti-hallucination</div><div class="model">Conscience</div></div>
+<div class="agent"><div class="icon">📝</div><div class="name">SCRIBE</div><div class="role">PR docs</div><div class="model">qwen3.5:0.8b</div></div>
+</div>
+
+<div id="how" class="features">
+<h2>How It Works</h2>
+<div class="feature-grid">
+<div class="feature"><h3>🔍 OBSERVE</h3><p>Submit your GitHub repo URL. NEXUS fetches every Python file and scans them with Mamba-3 SSM on GPU for byte-level pattern matching.</p></div>
+<div class="feature"><h3>🧠 THINK</h3><p>7 specialized AI agents analyze your code: SCOUT finds issues, ARCHITECT prioritizes, FORGE generates fixes, JUDGE evaluates quality.</p></div>
+<div class="feature"><h3>📐 VERIFY</h3><p>Lean4 formally verifies mathematical claims in your code. Conscience cross-validates every finding against 50K verified claims. Zero hallucination.</p></div>
+<div class="feature"><h3>🔧 FIX</h3><p>FORGE generates production-ready fixes. If local models can't handle it, deepseek-v4-flash:cloud with max thinking kicks in.</p></div>
+<div class="feature"><h3>📤 ACT</h3><p>Auto-creates a GitHub branch, commits the fix, and submits a Pull Request with a full description written by SCRIBE.</p></div>
+<div class="feature"><h3>📈 ADAPT</h3><p>Darwin-Gödel evolves agent prompts based on PR outcomes. Mamba-3 retrains on successful patterns. The system gets smarter every cycle.</p></div>
+</div>
+</div>
+
+<div id="pricing" class="pricing">
+<h2>Pricing</h2>
+<div class="pricing-grid">
+<div class="price-card">
+<div class="tier">FREE</div>
+<div class="price">$0<span>/mo</span></div>
+<ul>
+<li>5 audits per month</li>
+<li>Public repos only</li>
+<li>Basic issue report</li>
+<li>Community support</li>
+</ul>
+<a class="btn free" href="#audit">Start Free</a>
+</div>
+<div class="price-card popular">
+<div class="tier">PRO</div>
+<div class="price">$199<span>/mo</span></div>
+<ul>
+<li>50 audits per month</li>
+<li>Private repos</li>
+<li>Auto-PR generation</li>
+<li>Lean4 formal verification</li>
+<li>Priority queue</li>
+<li>Darwin-Gödel insights</li>
+</ul>
+<a class="btn paid" href="#audit">Start Pro</a>
+</div>
+<div class="price-card">
+<div class="tier">ENTERPRISE</div>
+<div class="price">$499<span>/mo</span></div>
+<ul>
+<li>Unlimited audits</li>
+<li>Custom agent training</li>
+<li>On-premise Lean4</li>
+<li>Supabase integration</li>
+<li>SLA + dedicated support</li>
+<li>Webhook automation</li>
+</ul>
+<a class="btn paid" href="#audit">Contact Us</a>
+</div>
+</div>
+</div>
+
+<footer>
+<p>⚡ NEXUS — Autonomous AI Code Audit with Formal Verification</p>
+<p style="margin-top:8px">Powered by Mamba-3 SSM · Lean4 · Conscience · Darwin-Gödel · ALEPH · Ollama · Supabase</p>
+<p style="margin-top:8px"><a href="https://github.com/arm00pv/nexus-swarm" style="color:#00d4ff">GitHub</a> · <a href="https://marquezhv.com/api/nexus/" style="color:#00d4ff">API Docs</a> · <a href="https://marquezhv.com/api/nexus/health" style="color:#00d4ff">Health</a></p>
+</footer>
+</div>
+
+<div class="result-modal" id="result-modal">
+<div class="result-box" id="result-box">
+<h2>🔍 Audit Results</h2>
+<div id="result-content">Analyzing...</div>
+</div>
+</div>
+
+<script>
+async function startAudit() {
+const repo = document.getElementById('repo-url').value.trim();
+if (!repo) { alert('Enter a GitHub repo URL'); return; }
+const cleanRepo = repo.replace('https://github.com/', '').replace('http://github.com/', '');
+const modal = document.getElementById('result-modal');
+const content = document.getElementById('result-content');
+modal.classList.add('active');
+content.innerHTML = '<p style="text-align:center;color:#00d4ff">⏳ 7 agents are analyzing your code...<br><br>SCOUT → ARCHITECT → FORGE → JUDGE → PROVER → GUARDIAN → SCRIBE<br><br>This may take 2-5 minutes.</p>';
+
+try {
+const resp = await fetch('https://marquezhv.com/api/nexus/github', {
+method: 'POST',
+headers: {'Content-Type': 'application/json'},
+body: JSON.stringify({repo: cleanRepo, path: '', branch: 'main'})
+});
+const data = await resp.json();
+if (data.error) {
+content.innerHTML = '<p style="color:#ff4444">Error: ' + data.error + '</p><p>Try: github.com/arm00pv/propkeep</p>';
+return;
+}
+let html = '<div class="score">' + (data.summary?.judge_score || 0) + '/100</div>';
+html += '<p style="text-align:center;color:#888;margin-bottom:20px">JUDGE Score · ' + (data.summary?.verdict || 'unknown') + '</p>';
+html += '<p><strong>Issues found: ' + (data.summary?.issues_found || 0) + '</strong></p><br>';
+if (data.issues && data.issues.length > 0) {
+data.issues.forEach(issue => {
+const sev = (issue.severity || 'low').toLowerCase();
+html += '<div class="issue ' + sev + '"><strong>[' + sev.toUpperCase() + ']</strong> Line ' + (issue.line || '?') + ': ' + (issue.description || '') + '</div>';
+});
+}
+if (data.pr_description) {
+html += '<br><h3>📝 PR Description</h3><pre style="background:#1a1a2e;padding:16px;border-radius:8px;overflow-x:auto;font-size:.85em">' + data.pr_description.substring(0, 500) + '</pre>';
+}
+html += '<br><p style="text-align:center"><a href="https://marquezhv.com" style="color:#00d4ff">Full report →</a></p>';
+content.innerHTML = html;
+} catch(e) {
+content.innerHTML = '<p style="color:#ff4444">Connection error. The NEXUS API may be processing another audit.</p><p style="margin-top:12px">Try the direct API: <code>POST https://marquezhv.com/api/nexus/github</code></p>';
+}
+}
+document.addEventListener('keydown', e => { if(e.key === 'Escape') document.getElementById('result-modal').classList.remove('active'); });
+</script>
+</body>
+</html>

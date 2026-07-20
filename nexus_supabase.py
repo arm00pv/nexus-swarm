@@ -71,7 +71,7 @@ def supabase_insert(rows):
 def supabase_query(topic_prefix, limit=100):
     """Query Supabase for rows with a topic prefix."""
     try:
-        url = f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLE}?topic=like.{topic_prefix}*&limit={limit}&order=created_at.desc"
+        url = SUPABASE_URL + "/rest/v1/" + SUPABASE_TABLE + "?topic=like." + topic_prefix + "*&limit=" + str(limit) + "&order=created_at.desc"
         r = urllib.request.Request(url, headers={
             "apikey": SUPABASE_KEY,
             "Authorization": f"Bearer {SUPABASE_KEY}",
@@ -84,9 +84,9 @@ def supabase_query(topic_prefix, limit=100):
 def supabase_count(topic_prefix=None):
     """Count rows in Supabase."""
     try:
-        url = f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLE}?select=id&limit=1"
+        url = SUPABASE_URL + "/rest/v1/" + SUPABASE_TABLE + "?select=id&limit=1"
         if topic_prefix:
-            url += f"&topic=like.{topic_prefix}*"
+            url += "&topic=like." + topic_prefix + "*"
         r = urllib.request.Request(url, headers={
             "apikey": SUPABASE_KEY,
             "Authorization": f"Bearer {SUPABASE_KEY}",

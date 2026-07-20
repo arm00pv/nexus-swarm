@@ -37,7 +37,7 @@ sys.path.insert(0, "/home/zixen15/brains")
 sys.path.insert(0, "/home/zixen15/omni-mamba-brain/src")
 
 # ============ CONFIG ============
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "os.environ.get("GITHUB_TOKEN","")")
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 AUTONOMOS_DB = "/home/zixen15/nexus/autonomos.db"
 STATE_FILE = "/home/zixen15/nexus/autonomos_state.json"
 

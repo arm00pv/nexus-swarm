@@ -251,7 +251,7 @@ def full_github_setup(repo):
 # ============ TEST ============
 if __name__ == "__main__":
     import os
-    os.environ.setdefault("GITHUB_TOKEN", "os.environ.get("GITHUB_TOKEN","")")
+    os.environ.setdefault("GITHUB_TOKEN", os.environ.get("GITHUB_TOKEN", ""))
     
     print("=" * 60)
     print("NEXUS GitHub Integration Test")

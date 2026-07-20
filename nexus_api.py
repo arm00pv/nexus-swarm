@@ -221,6 +221,10 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
             conn.close()
             self._json({"research": [{"source": r[0], "finding": r[1][:200]} for r in rows], "count": len(rows)})
 
+        elif path == "/api/nexus/sbom/status":
+            from nexus_sbom import get_sbom_status
+            self._json(get_sbom_status())
+
         elif path == "/api/nexus/diff/status":
             from nexus_diff_scanner import get_diff_scan_status
             self._json(get_diff_scan_status())
@@ -491,6 +495,16 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
                     self._json({"error": "Could not get latest commit"}, 404)
                     return
             result = scan_commit(repo, sha)
+            self._json(result)
+
+        elif path == "/api/nexus/sbom/scan":
+            from nexus_sbom import scan_repo
+            repo = body.get("repo", "")
+            branch = body.get("branch", "main")
+            if not repo:
+                self._json({"error": "repo required"}, 400)
+                return
+            result = scan_repo(repo, branch)
             self._json(result)
 
         elif path == "/api/nexus/supabase/sync":

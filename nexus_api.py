@@ -124,21 +124,21 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
             self._json({
                 "status": "healthy",
                 "service": "NEXUS Swarm",
-                "version": "2.0.0",
-                "agents": list(AGENT_MODELS.keys()),
-                "models": AGENT_MODELS,
+                "version": "3.0.0",
+                "agents": 7,
                 "aleph_edges": self._aleph_count(),
             })
 
         elif path == "/api/nexus/agents":
+            # Public agent info — NO internal model names exposed
             agents = [
-                {"name": "SCOUT", "model": AGENT_MODELS["scout"], "role": "Fast code scanning", "icon": "🔍"},
-                {"name": "ARCHITECT", "model": AGENT_MODELS["architect"], "role": "Deep code analysis", "icon": "🏗️"},
-                {"name": "FORGE", "model": AGENT_MODELS["forge"], "role": "Code generation", "icon": "🔨"},
-                {"name": "JUDGE", "model": AGENT_MODELS["judge"], "role": "Fix evaluation", "icon": "⚖️"},
-                {"name": "PROVER", "model": "Lean4", "role": "Formal verification", "icon": "📐"},
-                {"name": "GUARDIAN", "model": "Conscience", "role": "Anti-hallucination", "icon": "🛡️"},
-                {"name": "SCRIBE", "model": AGENT_MODELS["scribe"], "role": "PR documentation", "icon": "📝"},
+                {"name": "SCOUT", "role": "Fast code scanning", "icon": "🔍"},
+                {"name": "ARCHITECT", "role": "Deep code analysis", "icon": "🏗️"},
+                {"name": "FORGE", "role": "Code generation + iterative refinement", "icon": "🔨"},
+                {"name": "JUDGE", "role": "Fix evaluation", "icon": "⚖️"},
+                {"name": "PROVER", "role": "Formal verification (Lean4)", "icon": "📐"},
+                {"name": "GUARDIAN", "role": "Anti-hallucination (50K verified claims)", "icon": "🛡️"},
+                {"name": "SCRIBE", "role": "PR documentation", "icon": "📝"},
             ]
             self._json({"agents": agents, "count": len(agents)})
 
@@ -243,7 +243,14 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         parsed = urlparse(self.path)
         path = parsed.path
-        body = self._read_body()
+        try:
+            body = self._read_body()
+        except:
+            self._json({"error": "Invalid JSON body"}, 400)
+            return
+        if not body:
+            self._json({"error": "Empty body"}, 400)
+            return
 
         if path == "/api/nexus/analyze":
             code = body.get("code", "")

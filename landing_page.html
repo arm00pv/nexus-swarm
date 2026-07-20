@@ -4,13 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NEXUS — AI Code Audit & Formal Verification</title>
-<meta name="description" content="Submit your GitHub repo. Get a 7-agent AI security audit with Lean4 formal verification, anti-hallucination guarantees, and auto-PR fixes. Zero false positives.">
+<meta name="description" content="Submit your GitHub repo. Get a multi-agent AI security audit with formal verification, anti-hallucination guarantees, and auto-PR fixes.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',sans-serif;background:#0a0a0f;color:#e0e0e0;overflow-x:hidden}
-.mono{font-family:'JetBrains Mono',monospace}
 .container{max-width:1200px;margin:0 auto;padding:0 24px}
 nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
 nav .logo{font-size:1.5em;font-weight:900;background:linear-gradient(135deg,#00d4ff,#7b2ff7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
@@ -34,7 +33,6 @@ nav .cta{background:linear-gradient(135deg,#00d4ff,#7b2ff7);color:#000;padding:1
 .agent .icon{font-size:2em;margin-bottom:8px}
 .agent .name{font-weight:700;font-size:.95em}
 .agent .role{font-size:.75em;color:#888;margin-top:4px}
-.agent .model{font-size:.65em;color:#555;margin-top:2px}
 .features{padding:60px 0}
 .features h2{text-align:center;font-size:2.5em;margin-bottom:40px;font-weight:800}
 .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
@@ -94,37 +92,37 @@ footer{text-align:center;padding:40px 0;color:#555;font-size:.85em;border-top:1p
 <input type="text" id="repo-url" placeholder="github.com/yourname/your-repo">
 <button onclick="startAudit()">🔍 Audit My Code</button>
 </div>
-<div class="badge">✦ Powered by Mamba-3 SSM GPU + Lean4 + Conscience + Darwin-Gödel</div>
+<div class="badge">✦ Formal Verification · Anti-Hallucination · Self-Improving · Zero False Positives</div>
 </div>
 
 <div class="stats">
 <div class="stats-grid">
 <div class="stat"><div class="num">7</div><div class="label">AI Agents</div></div>
-<div class="stat"><div class="num">378K</div><div class="label">ALEPH Edges</div></div>
+<div class="stat"><div class="num">378K</div><div class="label">Knowledge Edges</div></div>
 <div class="stat"><div class="num">50K</div><div class="label">Verified Claims</div></div>
-<div class="stat"><div class="num">$0</div><div class="label">Cloud Cost</div></div>
+<div class="stat"><div class="num">100%</div><div class="label">Self-Improving</div></div>
 </div>
 </div>
 
 <div id="agents" class="agents">
-<div class="agent"><div class="icon">🔍</div><div class="name">SCOUT</div><div class="role">Fast scanner</div><div class="model">qwen3.5:0.8b</div></div>
-<div class="agent"><div class="icon">🏗️</div><div class="name">ARCHITECT</div><div class="role">Deep analysis</div><div class="model">qwen3.5:4b</div></div>
-<div class="agent"><div class="icon">🔨</div><div class="name">FORGE</div><div class="role">Code generation</div><div class="model">qwen3.5:4b</div></div>
-<div class="agent"><div class="icon">⚖️</div><div class="name">JUDGE</div><div class="role">Fix evaluation</div><div class="model">qwen3.5:4b</div></div>
-<div class="agent"><div class="icon">📐</div><div class="name">PROVER</div><div class="role">Formal proof</div><div class="model">Lean4</div></div>
-<div class="agent"><div class="icon">🛡️</div><div class="name">GUARDIAN</div><div class="role">Anti-hallucination</div><div class="model">Conscience</div></div>
-<div class="agent"><div class="icon">📝</div><div class="name">SCRIBE</div><div class="role">PR docs</div><div class="model">qwen3.5:0.8b</div></div>
+<div class="agent"><div class="icon">🔍</div><div class="name">SCOUT</div><div class="role">Fast scanner</div></div>
+<div class="agent"><div class="icon">🏗️</div><div class="name">ARCHITECT</div><div class="role">Deep analysis</div></div>
+<div class="agent"><div class="icon">🔨</div><div class="name">FORGE</div><div class="role">Code generation</div></div>
+<div class="agent"><div class="icon">⚖️</div><div class="name">JUDGE</div><div class="role">Fix evaluation</div></div>
+<div class="agent"><div class="icon">📐</div><div class="name">PROVER</div><div class="role">Formal proof</div></div>
+<div class="agent"><div class="icon">🛡️</div><div class="name">GUARDIAN</div><div class="role">Anti-hallucination</div></div>
+<div class="agent"><div class="icon">📝</div><div class="name">SCRIBE</div><div class="role">PR docs</div></div>
 </div>
 
 <div id="how" class="features">
 <h2>How It Works</h2>
 <div class="feature-grid">
-<div class="feature"><h3>🔍 OBSERVE</h3><p>Submit your GitHub repo URL. NEXUS fetches every Python file and scans them with Mamba-3 SSM on GPU for byte-level pattern matching.</p></div>
+<div class="feature"><h3>🔍 OBSERVE</h3><p>Submit your GitHub repo URL. NEXUS fetches every Python file and scans them with byte-level pattern matching on GPU for instant vulnerability detection.</p></div>
 <div class="feature"><h3>🧠 THINK</h3><p>7 specialized AI agents analyze your code: SCOUT finds issues, ARCHITECT prioritizes, FORGE generates fixes, JUDGE evaluates quality.</p></div>
-<div class="feature"><h3>📐 VERIFY</h3><p>Lean4 formally verifies mathematical claims in your code. Conscience cross-validates every finding against 50K verified claims. Zero hallucination.</p></div>
-<div class="feature"><h3>🔧 FIX</h3><p>FORGE generates production-ready fixes. If local models can't handle it, deepseek-v4-flash:cloud with max thinking kicks in.</p></div>
+<div class="feature"><h3>📐 VERIFY</h3><p>Lean4 formally verifies mathematical claims in your code. Conscience cross-validates every finding against 50K+ verified claims. Zero hallucination.</p></div>
+<div class="feature"><h3>🔧 FIX</h3><p>FORGE generates production-ready fixes with unlimited token generation. Each fix is evaluated by JUDGE and refined iteratively until quality threshold is met.</p></div>
 <div class="feature"><h3>📤 ACT</h3><p>Auto-creates a GitHub branch, commits the fix, and submits a Pull Request with a full description written by SCRIBE.</p></div>
-<div class="feature"><h3>📈 ADAPT</h3><p>Darwin-Gödel evolves agent prompts based on PR outcomes. Mamba-3 retrains on successful patterns. The system gets smarter every cycle.</p></div>
+<div class="feature"><h3>📈 ADAPT</h3><p>Darwin-Gödel evolves agent prompts based on PR outcomes. The brain retrains on successful patterns. The system gets smarter every cycle — automatically.</p></div>
 </div>
 </div>
 
@@ -161,8 +159,8 @@ footer{text-align:center;padding:40px 0;color:#555;font-size:.85em;border-top:1p
 <ul>
 <li>Unlimited audits</li>
 <li>Custom agent training</li>
-<li>On-premise Lean4</li>
-<li>Supabase integration</li>
+<li>On-premise deployment</li>
+<li>Cloud redundancy included</li>
 <li>SLA + dedicated support</li>
 <li>Webhook automation</li>
 </ul>
@@ -173,8 +171,8 @@ footer{text-align:center;padding:40px 0;color:#555;font-size:.85em;border-top:1p
 
 <footer>
 <p>⚡ NEXUS — Autonomous AI Code Audit with Formal Verification</p>
-<p style="margin-top:8px">Powered by Mamba-3 SSM · Lean4 · Conscience · Darwin-Gödel · ALEPH · Ollama · Supabase</p>
-<p style="margin-top:8px"><a href="https://github.com/arm00pv/nexus-swarm" style="color:#00d4ff">GitHub</a> · <a href="https://marquezhv.com/api/nexus/" style="color:#00d4ff">API Docs</a> · <a href="https://marquezhv.com/api/nexus/health" style="color:#00d4ff">Health</a></p>
+<p style="margin-top:8px">Formal Verification · Anti-Hallucination · Self-Improving · Autonomous · Edge Computing</p>
+<p style="margin-top:8px"><a href="https://github.com/arm00pv/nexus-swarm" style="color:#00d4ff">GitHub</a> · <a href="https://marquezhv.com/api/nexus/" style="color:#00d4ff">API</a> · <a href="https://marquezhv.com/api/nexus/health" style="color:#00d4ff">Status</a></p>
 </footer>
 </div>
 
@@ -199,13 +197,16 @@ try {
 const resp = await fetch('https://marquezhv.com/api/nexus/github', {
 method: 'POST',
 headers: {'Content-Type': 'application/json'},
-body: JSON.stringify({repo: cleanRepo, path: '', branch: 'main'})
+body: JSON.stringify({repo: cleanRepo, branch: 'main'})
 });
 const data = await resp.json();
 if (data.error) {
 content.innerHTML = '<p style="color:#ff4444">Error: ' + data.error + '</p><p>Try: github.com/arm00pv/propkeep</p>';
 return;
 }
+if (data.status === 'queued') {
+content.innerHTML = '<div style="text-align:center"><p style="color:#00d4ff;font-size:1.2em">✅ Audit Queued!</p><p style="color:#888;margin:16px 0">' + data.message + '</p><p style="color:#888">Audit ID: <code>' + data.audit_id + '</code></p><p style="margin-top:20px"><a href="' + data.check_status + '" style="color:#00d4ff">Check Status →</a></p></div>';
+} else if (data.summary) {
 let html = '<div class="score">' + (data.summary?.judge_score || 0) + '/100</div>';
 html += '<p style="text-align:center;color:#888;margin-bottom:20px">JUDGE Score · ' + (data.summary?.verdict || 'unknown') + '</p>';
 html += '<p><strong>Issues found: ' + (data.summary?.issues_found || 0) + '</strong></p><br>';
@@ -215,13 +216,10 @@ const sev = (issue.severity || 'low').toLowerCase();
 html += '<div class="issue ' + sev + '"><strong>[' + sev.toUpperCase() + ']</strong> Line ' + (issue.line || '?') + ': ' + (issue.description || '') + '</div>';
 });
 }
-if (data.pr_description) {
-html += '<br><h3>📝 PR Description</h3><pre style="background:#1a1a2e;padding:16px;border-radius:8px;overflow-x:auto;font-size:.85em">' + data.pr_description.substring(0, 500) + '</pre>';
-}
-html += '<br><p style="text-align:center"><a href="https://marquezhv.com" style="color:#00d4ff">Full report →</a></p>';
 content.innerHTML = html;
+}
 } catch(e) {
-content.innerHTML = '<p style="color:#ff4444">Connection error. The NEXUS API may be processing another audit.</p><p style="margin-top:12px">Try the direct API: <code>POST https://marquezhv.com/api/nexus/github</code></p>';
+content.innerHTML = '<p style="color:#ff4444">Connection error. The NEXUS API may be processing another audit.</p>';
 }
 }
 document.addEventListener('keydown', e => { if(e.key === 'Escape') document.getElementById('result-modal').classList.remove('active'); });

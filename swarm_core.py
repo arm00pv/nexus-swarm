@@ -43,12 +43,17 @@ MAX_ITERATIONS = 10
 TIMEOUT_SECONDS = 60
 
 # ALL LOCAL MODELS — zero cloud cost
+# Cloud fallback for complex tasks: deepseek-v4-flash:cloud
+CLOUD_FALLBACK_MODEL = "deepseek-v4-flash:cloud"
+CLOUD_FALLBACK_THRESHOLD = 40  # If JUDGE score < 40 after local attempts, use cloud
+
 AGENT_MODELS = {
     "scout":     "qwen3.5:0.8b",  # local, fast scanning
     "architect": "qwen3.5:4b",    # local, deep analysis
     "forge":     "qwen3.5:4b",    # local, code generation
     "judge":     "qwen3.5:4b",    # local, evaluation
     "scribe":    "qwen3.5:0.8b",  # local, documentation
+    "forge_cloud": CLOUD_FALLBACK_MODEL,  # cloud fallback for complex fixes
 }
 
 # ============ ALEPH STORAGE ============
@@ -374,6 +379,31 @@ def swarm_analyze(code, language="python"):
             judge_result = agent_judge(code, fixed_code, issues, language)
             verdict = judge_result.get("verdict", {})
             sys.stderr.write(f"[NEXUS] JUDGE re-evaluation: {verdict.get('verdict', 'unknown')} score: {verdict.get('score', 0)}\n")
+    
+    # 4c. Cloud Fallback — if local models still can't produce a quality fix, use deepseek-v4-flash:cloud
+    if verdict.get("score", 0) < CLOUD_FALLBACK_THRESHOLD and len(issues) > 0:
+        sys.stderr.write(f"[NEXUS] FORGE cloud fallback (local score {verdict.get('score', 0)} < {CLOUD_FALLBACK_THRESHOLD})...")
+        cloud_system = "You are FORGE, an expert code generator. Fix ALL security issues while preserving functionality. Output ONLY the fixed code, no explanations."
+        cloud_prompt = f"Fix this {language} code:\n```\n{code}\n```\nIssues to fix:\n{json.dumps(issues[:5])}\nFix strategy: {strategy}\n\nOutput the complete fixed code."
+        cloud_response = call_llm(AGENT_MODELS["forge_cloud"], cloud_system, cloud_prompt, timeout=60, priority=Priority.CRITICAL)
+        # Extract code
+        cloud_fixed = cloud_response
+        try:
+            if f"```{language}" in cloud_response:
+                cloud_fixed = cloud_response.split(f"```{language}")[1].split("```")[0]
+            elif "```" in cloud_response:
+                cloud_fixed = cloud_response.split("```")[1].split("```")[0]
+        except:
+            pass
+        if cloud_fixed and len(cloud_fixed) > 20:
+            fixed_code = cloud_fixed.strip()
+            sys.stderr.write(f" cloud fix: {len(fixed_code)} chars\n")
+            # Re-judge the cloud fix
+            judge_result = agent_judge(code, fixed_code, issues, language)
+            verdict = judge_result.get("verdict", {})
+            sys.stderr.write(f"[NEXUS] JUDGE cloud evaluation: {verdict.get('verdict', 'unknown')} score: {verdict.get('score', 0)}\n")
+        else:
+            sys.stderr.write(f" cloud fix failed\n")
     
     # 5. PROVER — Formal verification
     sys.stderr.write(f"[NEXUS] Agent PROVER verifying with Lean4...\n")

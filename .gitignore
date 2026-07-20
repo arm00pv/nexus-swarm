@@ -1,0 +1,4 @@
+__pycache__/
+autonomos.db
+nexus_darwin.db
+supabase_sync_state.json

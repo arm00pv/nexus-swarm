@@ -1,0 +1,497 @@
+#!/usr/bin/env python3
+"""
+NEXUS Swarm API — Size 2: HTTP API Server
+=========================================
+Exposes the 7-agent swarm as REST endpoints on marquezhv.com.
+
+Endpoints:
+  POST /api/nexus/analyze    — Run full swarm on code snippet
+  GET  /api/nexus/sessions    — List past sessions from ALEPH
+  GET  /api/nexus/session/:id — Get session details
+  POST /api/nexus/github      — Analyze a GitHub repo
+  GET  /api/nexus/health      — Health check
+  GET  /api/nexus/agents       — List agent info
+
+Runs on port 8002 locally, proxied via marquezhv.com.
+"""
+import sys
+import os
+import json
+import time
+import sqlite3
+import urllib.request
+
+sys.path.insert(0, "/home/zixen15/nexus")
+sys.path.insert(0, "/home/zixen15/brains")
+
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import urlparse, parse_qs
+
+# Import swarm core
+from swarm_core import (
+    swarm_analyze, aleph_inject, aleph_query,
+    AGENT_MODELS, call_llm, lean4_verify, conscience_validate,
+    ALEPH_DB
+)
+from llm_scheduler import SCHEDULER, Priority
+from nexus_integration import (
+    MAMBA_SCANNER, EGO_TRACKER,
+    sophia_distill, boif_select_brain, hivemind_consensus,
+    pi_health_check, get_mcp_tools, semb_status, ocl_status,
+    get_full_system_status,
+)
+
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+
+# ============ GITHUB INTEGRATION ============
+def fetch_github_file(repo, path, branch="main"):
+    """Fetch a file from a GitHub repo."""
+    url = f"https://raw.githubusercontent.com/{repo}/{branch}/{path}"
+    try:
+        r = urllib.request.Request(url, headers={
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3.raw",
+        })
+        with urllib.request.urlopen(r, timeout=30) as resp:
+            return resp.read().decode()
+    except Exception as e:
+        sys.stderr.write(f"[NEXUS API] GitHub fetch failed: {e}\n")
+        return None
+
+def list_repo_python_files(repo, branch="main"):
+    """List Python files in a GitHub repo using the API."""
+    url = f"https://api.github.com/repos/{repo}/git/trees/{branch}?recursive=1"
+    try:
+        r = urllib.request.Request(url, headers={
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json",
+        })
+        with urllib.request.urlopen(r, timeout=30) as resp:
+            data = json.loads(resp.read())
+            return [item["path"] for item in data.get("tree", []) 
+                    if item["path"].endswith(".py") and item["type"] == "blob"]
+    except Exception as e:
+        sys.stderr.write(f"[NEXUS API] GitHub list failed: {e}\n")
+        return []
+
+def create_github_pr(repo, branch, title, body, head_branch="nexus-fix"):
+    """Create a pull request on GitHub."""
+    url = f"https://api.github.com/repos/{repo}/pulls"
+    try:
+        data = json.dumps({
+            "title": title,
+            "body": body,
+            "head": head_branch,
+            "base": branch,
+        }).encode()
+        r = urllib.request.Request(url, data=data, headers={
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json",
+        })
+        with urllib.request.urlopen(r, timeout=30) as resp:
+            result = json.loads(resp.read())
+            return {"pr_url": result.get("html_url", ""), "pr_number": result.get("number", 0)}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ============ HTTP HANDLER ============
+class NexusAPIHandler(BaseHTTPRequestHandler):
+    def _json(self, data, code=200):
+        body = json.dumps(data, default=str).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _read_body(self):
+        length = int(self.headers.get("Content-Length", 0))
+        if length:
+            return json.loads(self.rfile.read(length))
+        return {}
+
+    def do_OPTIONS(self):
+        self._json({"status": "ok"})
+
+    def do_GET(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+        params = parse_qs(parsed.query)
+
+        if path == "/api/nexus/health":
+            self._json({
+                "status": "healthy",
+                "service": "NEXUS Swarm",
+                "version": "2.0.0",
+                "agents": list(AGENT_MODELS.keys()),
+                "models": AGENT_MODELS,
+                "aleph_edges": self._aleph_count(),
+            })
+
+        elif path == "/api/nexus/agents":
+            agents = [
+                {"name": "SCOUT", "model": AGENT_MODELS["scout"], "role": "Fast code scanning", "icon": "🔍"},
+                {"name": "ARCHITECT", "model": AGENT_MODELS["architect"], "role": "Deep code analysis", "icon": "🏗️"},
+                {"name": "FORGE", "model": AGENT_MODELS["forge"], "role": "Code generation", "icon": "🔨"},
+                {"name": "JUDGE", "model": AGENT_MODELS["judge"], "role": "Fix evaluation", "icon": "⚖️"},
+                {"name": "PROVER", "model": "Lean4", "role": "Formal verification", "icon": "📐"},
+                {"name": "GUARDIAN", "model": "Conscience", "role": "Anti-hallucination", "icon": "🛡️"},
+                {"name": "SCRIBE", "model": AGENT_MODELS["scribe"], "role": "PR documentation", "icon": "📝"},
+            ]
+            self._json({"agents": agents, "count": len(agents)})
+
+        elif path == "/api/nexus/sessions":
+            sessions = aleph_query("nexus_session", limit=20)
+            self._json({"sessions": sessions, "count": len(sessions)})
+
+        elif path == "/api/nexus/queue":
+            # LLM scheduler status
+            status = SCHEDULER.get_status()
+            self._json(status)
+
+        elif path == "/api/nexus/darwin/status":
+            # NEXUS-DARWIN evolution status
+            from nexus_darwin import get_evolution_status
+            self._json(get_evolution_status())
+
+        elif path == "/api/nexus/darwin/prompts":
+            # View current evolved prompts
+            from nexus_darwin import load_prompts
+            prompts = load_prompts()
+            self._json({"prompts": prompts, "count": len(prompts)})
+
+        elif path == "/api/nexus/darwin/history":
+            # View mutation history
+            from nexus_darwin import nexus_query
+            results = nexus_query("darwin_cycle", limit=50)
+            self._json({"history": results, "count": len(results)})
+
+        elif path == "/api/nexus/system":
+            # Full system status — ALL integrated components
+            self._json(get_full_system_status())
+
+        elif path == "/api/nexus/mamba/scan":
+            # Mamba-3 SSM fast code scanner (CPU, no GPU needed)
+            code = parse_qs(urlparse(self.path).query).get("code", [""])[0]
+            if not code:
+                self._json({"error": "code parameter required"}, 400)
+            else:
+                self._json(MAMBA_SCANNER.scan(code))
+
+        elif path == "/api/nexus/semb":
+            self._json(semb_status())
+
+        elif path == "/api/nexus/ocl":
+            self._json(ocl_status())
+
+        elif path == "/api/nexus/pi":
+            self._json(pi_health_check())
+
+        elif path == "/api/nexus/mamba-gpu/status":
+            from mamba_gpu_bridge import get_mamba_gpu_status
+            self._json(get_mamba_gpu_status())
+
+        elif path == "/api/nexus/supabase/status":
+            from nexus_supabase import get_sync_status
+            self._json(get_sync_status())
+
+        elif path == "/api/nexus/autonomos/status":
+            from nexus_autonomos import get_status
+            self._json(get_status())
+
+        elif path == "/api/nexus/mcp":
+            self._json(get_mcp_tools())
+
+        elif path.startswith("/api/nexus/session/"):
+            session_id = path.split("/")[-1]
+            results = aleph_query(session_id, limit=10)
+            self._json({"session_id": session_id, "edges": results, "count": len(results)})
+
+        else:
+            self._json({"error": "Not found", "path": path}, 404)
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+        body = self._read_body()
+
+        if path == "/api/nexus/analyze":
+            code = body.get("code", "")
+            language = body.get("language", "python")
+            
+            if not code:
+                self._json({"error": "No code provided"}, 400)
+                return
+            
+            sys.stderr.write(f"\n[NEXUS API] Analyze request: {len(code)} chars, {language}\n")
+            
+            result = swarm_analyze(code, language)
+            
+            self._json({
+                "session_id": result["session_id"],
+                "summary": result["summary"],
+                "issues": result["agents"]["scout"].get("issues", []),
+                "fixed_code": result["agents"]["forge"].get("fixed_code", ""),
+                "verdict": result["agents"]["judge"].get("verdict", {}),
+                "pr_description": result["agents"]["scribe"].get("pr_description", ""),
+                "lean4_verification": result["agents"]["prover"].get("verified_claims", []),
+                "conscience_validation": result["agents"]["guardian"].get("validations", []),
+            })
+
+        elif path == "/api/nexus/github":
+            repo = body.get("repo", "")  # e.g. "arm00pv/propkeep"
+            file_path = body.get("path", "")
+            branch = body.get("branch", "main")
+            
+            if not repo or not file_path:
+                self._json({"error": "repo and path required"}, 400)
+                return
+            
+            # Fetch file from GitHub
+            code = fetch_github_file(repo, file_path, branch)
+            if not code:
+                self._json({"error": f"Could not fetch {file_path} from {repo}"}, 404)
+                return
+            
+            # Determine language
+            lang = "python" if file_path.endswith(".py") else "text"
+            
+            sys.stderr.write(f"\n[NEXUS API] GitHub analyze: {repo}/{file_path} ({len(code)} chars)\n")
+            
+            result = swarm_analyze(code, lang)
+            
+            self._json({
+                "repo": repo,
+                "file": file_path,
+                "branch": branch,
+                "session_id": result["session_id"],
+                "summary": result["summary"],
+                "issues": result["agents"]["scout"].get("issues", []),
+                "verdict": result["agents"]["judge"].get("verdict", {}),
+                "pr_description": result["agents"]["scribe"].get("pr_description", ""),
+            })
+
+        elif path == "/api/nexus/github/scan":
+            # Scan all Python files in a repo
+            repo = body.get("repo", "")
+            branch = body.get("branch", "main")
+            max_files = body.get("max_files", 3)
+            
+            if not repo:
+                self._json({"error": "repo required"}, 400)
+                return
+            
+            files = list_repo_python_files(repo, branch)
+            if not files:
+                self._json({"error": "No Python files found or repo not accessible"}, 404)
+                return
+            
+            results = []
+            for f in files[:max_files]:
+                code = fetch_github_file(repo, f, branch)
+                if code:
+                    r = swarm_analyze(code, "python")
+                    results.append({
+                        "file": f,
+                        "issues": r["summary"]["issues_found"],
+                        "verdict": r["summary"]["verdict"],
+                        "score": r["summary"]["judge_score"],
+                    })
+            
+            self._json({
+                "repo": repo,
+                "files_scanned": len(results),
+                "total_files": len(files),
+                "results": results,
+            })
+
+        elif path == "/api/nexus/github/create-fix":
+            # Create a fix branch and commit the fixed code
+            repo = body.get("repo", "")
+            file_path = body.get("path", "")
+            branch = body.get("branch", "main")
+            fixed_code = body.get("fixed_code", "")
+            pr_description = body.get("pr_description", "NEXUS auto-fix")
+            
+            if not repo or not file_path or not fixed_code:
+                self._json({"error": "repo, path, and fixed_code required"}, 400)
+                return
+            
+            # Create a new branch
+            branch_name = f"nexus-fix-{int(time.time())}"
+            try:
+                # Get the SHA of the base branch
+                url = f"https://api.github.com/repos/{repo}/git/refs/heads/{branch}"
+                r = urllib.request.Request(url, headers={"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"})
+                with urllib.request.urlopen(r, timeout=30) as resp:
+                    ref_data = json.loads(resp.read())
+                    base_sha = ref_data["object"]["sha"]
+                
+                # Create new branch
+                url = f"https://api.github.com/repos/{repo}/git/refs"
+                data = json.dumps({"ref": f"refs/heads/{branch_name}", "sha": base_sha}).encode()
+                r = urllib.request.Request(url, data=data, headers={"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"})
+                with urllib.request.urlopen(r, timeout=30) as resp:
+                    json.loads(resp.read())
+                
+                # Get current file SHA
+                url = f"https://api.github.com/repos/{repo}/contents/{file_path}?ref={branch_name}"
+                r = urllib.request.Request(url, headers={"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"})
+                with urllib.request.urlopen(r, timeout=30) as resp:
+                    file_data = json.loads(resp.read())
+                    file_sha = file_data.get("sha", "")
+                
+                # Update file on new branch
+                import base64
+                url = f"https://api.github.com/repos/{repo}/contents/{file_path}"
+                data = json.dumps({
+                    "message": f"NEXUS: Auto-fix security issues in {file_path}\n\n{pr_description[:500]}",
+                    "content": base64.b64encode(fixed_code.encode()).decode(),
+                    "sha": file_sha,
+                    "branch": branch_name,
+                }).encode()
+                r = urllib.request.Request(url, data=data, headers={"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"})
+                r.get_method = lambda: "PUT"
+                with urllib.request.urlopen(r, timeout=30) as resp:
+                    commit_data = json.loads(resp.read())
+                
+                # Create PR
+                pr_result = create_github_pr(repo, branch, f"NEXUS: Fix {file_path}", pr_description, branch_name)
+                
+                self._json({
+                    "status": "success",
+                    "branch": branch_name,
+                    "commit_sha": commit_data.get("commit", {}).get("sha", ""),
+                    "pr": pr_result,
+                })
+            except Exception as e:
+                self._json({"error": str(e), "status": "failed"}, 500)
+
+        elif path == "/api/nexus/mamba/scan":
+            # Mamba-3 SSM scan via POST
+            code = body.get("code", "")
+            if not code:
+                self._json({"error": "code required"}, 400)
+            else:
+                self._json(MAMBA_SCANNER.scan(code))
+
+        elif path == "/api/nexus/hivemind":
+            # Multi-agent consensus on fix quality
+            self._json(hivemind_consensus(
+                body.get("original", ""),
+                body.get("fixed", ""),
+                body.get("issues", []),
+            ))
+
+        elif path == "/api/nexus/boif/delegate":
+            # BOIF trust-weighted brain selection
+            self._json(boif_select_brain(
+                body.get("capability", "code_analysis"),
+                body.get("task", ""),
+            ))
+
+        elif path == "/api/nexus/mamba-gpu/scan":
+            # GPU-accelerated Mamba-3 SSM scan
+            from mamba_gpu_bridge import GpuMambaRunner
+            runner = GpuMambaRunner()
+            if runner.load(force_gpu=True):
+                result = runner.scan(body.get("code", ""))
+                runner.unload()
+                self._json(result)
+            else:
+                self._json({"error": "Failed to load Mamba model on GPU"}, 500)
+
+        elif path == "/api/nexus/mamba-gpu/train":
+            # Train Mamba LoRA on code patterns (GPU)
+            from mamba_gpu_bridge import train_mamba_lora
+            steps = body.get("steps", 50)
+            result = train_mamba_lora(steps=steps, lr=3e-4)
+            self._json(result)
+
+        elif path == "/api/nexus/supabase/sync":
+            from nexus_supabase import run_sync
+            result = run_sync()
+            self._json(result)
+
+        elif path == "/api/nexus/autonomos/cycle":
+            from nexus_autonomos import run_cycle
+            result = run_cycle()
+            self._json(result)
+
+        elif path == "/api/nexus/webhook":
+            # GitHub webhook handler — triggered on push/PR events
+            event = self.headers.get("X-GitHub-Event", "unknown")
+            if event == "push":
+                repo = body.get("repository", {}).get("full_name", "")
+                commits = body.get("commits", [])
+                files_changed = []
+                for commit in commits:
+                    files_changed.extend(commit.get("added", []))
+                    files_changed.extend(commit.get("modified", []))
+                py_files = [f for f in files_changed if f.endswith(".py")]
+                
+                self._json({
+                    "status": "received",
+                    "event": "push",
+                    "repo": repo,
+                    "files_to_analyze": py_files[:5],
+                    "message": f"Queued {len(py_files)} Python files for NEXUS analysis",
+                })
+                # TODO: Queue analysis for these files
+            elif event == "pull_request":
+                pr = body.get("pull_request", {})
+                self._json({
+                    "status": "received",
+                    "event": "pull_request",
+                    "action": body.get("action", ""),
+                    "pr_number": pr.get("number", 0),
+                    "pr_title": pr.get("title", ""),
+                    "repo": body.get("repository", {}).get("full_name", ""),
+                })
+            else:
+                self._json({"status": "received", "event": event})
+
+        elif path == "/api/nexus/darwin/evolve":
+            # Start a Darwin-Godel evolution cycle
+            from nexus_darwin import run_evolution_cycle
+            max_mutations = body.get("max_mutations", 3)
+            
+            sys.stderr.write(f"\n[NEXUS API] Darwin evolution cycle: {max_mutations} mutations\n")
+            
+            result = run_evolution_cycle(max_mutations=max_mutations)
+            
+            self._json({
+                "cycle_id": result["cycle_id"],
+                "baseline_score": result["baseline_score"],
+                "final_score": result["final_score"],
+                "total_improvement": result["total_improvement"],
+                "improvements": result["improvements"],
+                "regressions": result["regressions"],
+                "mutations": result["mutations"],
+            })
+
+        else:
+            self._json({"error": "Not found", "path": path}, 404)
+
+    def _aleph_count(self):
+        try:
+            with sqlite3.connect(ALEPH_DB) as conn:
+                return conn.execute("SELECT COUNT(*) FROM edges").fetchone()[0]
+        except:
+            return 0
+
+# ============ START ============
+if __name__ == "__main__":
+    port = 8002
+    server = HTTPServer(("0.0.0.0", port), NexusAPIHandler)
+    print(f"NEXUS Swarm API running on port {port}")
+    print(f"Endpoints:")
+    print(f"  GET  /api/nexus/health")
+    print(f"  GET  /api/nexus/agents")
+    print(f"  POST /api/nexus/analyze")
+    print(f"  POST /api/nexus/github")
+    print(f"  POST /api/nexus/github/scan")
+    print(f"  GET  /api/nexus/sessions")
+    server.serve_forever()

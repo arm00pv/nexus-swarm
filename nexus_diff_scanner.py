@@ -93,7 +93,7 @@ def get_latest_commit(repo, branch="main"):
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read())
             return data[0]["sha"] if data else None
-    except:
+    except Exception:
         return None
 
 def get_recent_commits(repo, branch="main", count=5):
@@ -107,7 +107,7 @@ def get_recent_commits(repo, branch="main", count=5):
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read())
             return [{"sha": c["sha"][:7], "message": c["commit"]["message"][:80], "date": c["commit"]["author"]["date"]} for c in data]
-    except:
+    except Exception:
         return []
 
 # ============ PATCH ANALYSIS ============
@@ -190,7 +190,7 @@ def scan_patch(patch, filename):
                     for issue in llm_issues:
                         issue["file"] = filename
                         issue["scanner"] = "llm"
-            except:
+            except Exception:
                 pass
         
         t = threading.Thread(target=run_llm, daemon=True)
@@ -248,7 +248,7 @@ def scan_commit(repo, sha):
                          json.dumps(issues), "", 0, "", time.time()))
             conn.commit()
             conn.close()
-        except:
+        except Exception:
             pass
         
         results.append({
@@ -279,7 +279,7 @@ def scan_commit(repo, sha):
             "verified": True,
         }]
         supabase_insert(supabase_rows)
-    except:
+    except Exception:
         pass
     
     return {
@@ -305,7 +305,7 @@ def get_diff_scan_status():
             "scans_with_issues": with_issues,
             "recent": [{"id": r[0], "repo": r[1], "commit": r[2], "file": r[3], "time": r[4]} for r in recent],
         }
-    except:
+    except Exception:
         return {"total_scans": 0, "scans_with_issues": 0, "recent": []}
 
 

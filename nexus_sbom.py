@@ -53,7 +53,7 @@ def fetch_file(repo, path, branch="main"):
         })
         with urllib.request.urlopen(req, timeout=15) as resp:
             return resp.read().decode()
-    except:
+    except Exception:
         return None
 
 def parse_requirements_txt(content):
@@ -325,7 +325,7 @@ def scan_repo(repo, branch="main"):
                      json.dumps(vuln_results)[:5000], duration, time.time()))
         conn.commit()
         conn.close()
-    except:
+    except Exception:
         pass
     
     # 6. Sync to Supabase
@@ -338,7 +338,7 @@ def scan_repo(repo, branch="main"):
             "source": "sbom_scanner",
             "verified": True,
         }])
-    except:
+    except Exception:
         pass
     
     return {
@@ -363,7 +363,7 @@ def get_sbom_status():
         recent = conn.execute("SELECT id, repo, scan_time, created_at FROM sbom_scans ORDER BY created_at DESC LIMIT 5").fetchall()
         conn.close()
         return {"total_scans": total, "recent": [{"id": r[0], "repo": r[1], "duration": r[2]} for r in recent]}
-    except:
+    except Exception:
         return {"total_scans": 0, "recent": []}
 
 

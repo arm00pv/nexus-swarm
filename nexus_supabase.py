@@ -29,7 +29,7 @@ sys.path.insert(0, "/home/zixen15/brains")
 
 # ============ SUPABASE CONFIG ============
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://lnossgbybsjjtnghoykf.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "") or "sb_secret_OKU5p10BHjTzHR8eh84ORQ_zqQdpnao"
 SUPABASE_TABLE = "neural_memory"
 
 # ============ LOCAL DB PATHS ============
@@ -78,7 +78,7 @@ def supabase_query(topic_prefix, limit=100):
         })
         with urllib.request.urlopen(r, timeout=15) as resp:
             return json.loads(resp.read())
-    except:
+    except Exception:
         return []
 
 def supabase_count(topic_prefix=None):
@@ -95,7 +95,7 @@ def supabase_count(topic_prefix=None):
         with urllib.request.urlopen(r, timeout=10) as resp:
             count = resp.headers.get("Content-Range", "*/0").split("/")[-1]
             return int(count) if count.isdigit() else 0
-    except:
+    except Exception:
         return 0
 
 # ============ SYNC STATE ============
@@ -104,7 +104,7 @@ def load_sync_state():
     try:
         with open(SYNC_STATE_FILE) as f:
             return json.load(f)
-    except:
+    except Exception:
         return {
             "last_aleph_sync": 0,
             "last_darwin_sync": 0,
@@ -301,7 +301,7 @@ def get_sync_status():
             count = conn.execute("SELECT COUNT(*) FROM edges" if name != "autonomos" else "SELECT COUNT(*) FROM prs").fetchone()[0]
             local_counts[name] = count
             conn.close()
-        except:
+        except Exception:
             local_counts[name] = 0
     
     return {

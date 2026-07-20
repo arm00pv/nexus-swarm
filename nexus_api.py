@@ -265,7 +265,7 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
         path = parsed.path
         try:
             body = self._read_body()
-        except:
+        except Exception:
             self._json({"error": "Invalid JSON body"}, 400)
             return
         if not body:
@@ -483,8 +483,11 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
             import mcp_server
             tool = body.get("tool", "")
             args = body.get("args", {})
-            if not tool or not hasattr(mcp_server, tool):
-                self._json({"error": f"tool '{tool}' not found", "available": [t for t in dir(mcp_server) if t.startswith("trigger_") or t in ["query_aleph","inject_aleph","verify_aleph","verify_math","query_ollama"]]}, 404)
+            # Whitelist of safe MCP tools (prevent arbitrary attribute access)
+            safe_tools = {"query_aleph", "inject_aleph", "verify_aleph", "verify_math", "query_ollama",
+                         "get_atlas_signal", "trigger_agentic_code_forge", "verify_with_lean4_mcp"}
+            if not tool or tool not in safe_tools:
+                self._json({"error": f"tool '{tool}' not allowed", "available": list(safe_tools)}, 403)
                 return
             try:
                 func = getattr(mcp_server, tool)
@@ -560,10 +563,10 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
                     def run_scan():
                         try:
                             unified_scan(repo, "main", create_issues=True)
-                        except:
+                        except Exception:
                             pass
                     threading.Thread(target=run_scan, daemon=True).start()
-                except:
+                except Exception:
                     pass
                 self._json({
                     "status": "scan_triggered",
@@ -610,7 +613,7 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
         try:
             with sqlite3.connect(ALEPH_DB) as conn:
                 return conn.execute("SELECT COUNT(*) FROM edges").fetchone()[0]
-        except:
+        except Exception:
             return 0
 
 # ============ START ============

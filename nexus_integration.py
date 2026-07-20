@@ -253,7 +253,7 @@ def hivemind_consensus(code: str, fixed_code: str, issues: list) -> Dict:
             vote = json.loads(response.strip())
             vote["judge"] = judge["name"]
             votes.append(vote)
-        except:
+        except Exception:
             votes.append({"judge": judge["name"], "verdict": "unknown", "score": 0})
     
     # Compute consensus
@@ -272,7 +272,7 @@ def hivemind_consensus(code: str, fixed_code: str, issues: list) -> Dict:
         hm = Hivemind()
         hm.post(f"NEXUS consensus vote: {consensus_verdict} (score {avg_score:.0f})",
                 topic="nexus_consensus")
-    except:
+    except Exception:
         pass
     
     return {
@@ -308,7 +308,7 @@ class EgoTracker:
             from ego import EGO
             ego = EGO()
             # EGO tracks AI identity and performance
-        except:
+        except Exception:
             pass
         
         # Store in NEXUS DB
@@ -318,7 +318,7 @@ class EgoTracker:
                 conn.execute("INSERT OR IGNORE INTO edges VALUES (?,?,?,?,?,?)",
                              (f"ego:{agent_name}", "scored", str(round(score,1)), "nexus_ego", 0.9, time.time()))
                 conn.commit()
-        except:
+        except Exception:
             pass
     
     def get_trust(self, agent_name: str) -> float:
@@ -347,7 +347,7 @@ def pi_health_check() -> Dict:
         result = sock.connect_ex((PI_IP, 22))
         sock.close()
         available = result == 0
-    except:
+    except Exception:
         available = False
     
     return {
@@ -405,7 +405,7 @@ def semb_status() -> Dict:
                 "last_output": last_line[:100],
             }
         return {"agent": "semb", "running": False}
-    except:
+    except Exception:
         return {"agent": "semb", "running": False, "error": "log not found"}
 
 
@@ -426,7 +426,7 @@ def ocl_status() -> Dict:
                 "last_output": last_line[:100],
             }
         return {"agent": "ocl", "running": False}
-    except:
+    except Exception:
         return {"agent": "ocl", "running": False}
 
 

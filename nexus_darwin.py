@@ -89,7 +89,7 @@ def nexus_query(concept, limit=20):
         results = [{"source": r["source"], "relation": r["relation"], "target": r["target"], "domain": r["domain"], "confidence": r["confidence"]} for r in cur.fetchall()]
         conn.close()
         return results
-    except:
+    except Exception:
         return []
 
 def nexus_count():
@@ -100,7 +100,7 @@ def nexus_count():
         count = conn.execute("SELECT COUNT(*) FROM edges").fetchone()[0]
         conn.close()
         return count
-    except:
+    except Exception:
         return 0
 
 # ============ TEST SUITE ============
@@ -518,7 +518,7 @@ def get_evolution_status():
             total_cycles = conn.execute("SELECT COUNT(*) FROM edges WHERE domain='nexus_darwin' AND relation='final_score'").fetchone()[0]
             total_improvements = conn.execute("SELECT COUNT(*) FROM edges WHERE domain='nexus_darwin' AND relation='mutation_improved'").fetchone()[0]
             total_rejections = conn.execute("SELECT COUNT(*) FROM edges WHERE domain='nexus_darwin' AND relation='mutation_rejected'").fetchone()[0]
-    except:
+    except Exception:
         total_cycles = 0
         total_improvements = 0
         total_rejections = 0

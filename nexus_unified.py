@@ -59,7 +59,7 @@ def github_api(url):
         })
         with urllib.request.urlopen(req, timeout=15) as resp:
             return json.loads(resp.read())
-    except:
+    except Exception:
         return {}
 
 def fetch_file(repo, path, branch="main"):
@@ -71,7 +71,7 @@ def fetch_file(repo, path, branch="main"):
         })
         with urllib.request.urlopen(req, timeout=15) as resp:
             return resp.read().decode()
-    except:
+    except Exception:
         return None
 
 def list_python_files(repo, branch="main"):
@@ -106,7 +106,7 @@ def create_github_issue(repo, title, body, labels=None):
         with urllib.request.urlopen(req, timeout=15) as resp:
             result = json.loads(resp.read())
             return result.get("html_url", "")
-    except:
+    except Exception:
         return ""
 
 # ============ PARALLEL SCANNERS ============
@@ -310,7 +310,7 @@ def unified_scan(repo, branch="main", create_issues=False):
                      json.dumps(report)[:5000], time.time(), duration))
         conn.commit()
         conn.close()
-    except:
+    except Exception:
         pass
     
     # Sync to Supabase
@@ -323,7 +323,7 @@ def unified_scan(repo, branch="main", create_issues=False):
             "source": "unified_scanner",
             "verified": True,
         }])
-    except:
+    except Exception:
         pass
     
     sys.stderr.write(f"[UNIFIED] Complete: score={score}/100, {total_issues} code issues, {total_vulns} dep vulns, {duration:.1f}s\n")
@@ -340,7 +340,7 @@ def get_unified_status():
             "total_scans": total,
             "recent": [{"id": r[0], "repo": r[1], "score": r[2], "code_issues": r[3], "vulns": r[4], "duration": r[5]} for r in recent],
         }
-    except:
+    except Exception:
         return {"total_scans": 0, "recent": []}
 
 

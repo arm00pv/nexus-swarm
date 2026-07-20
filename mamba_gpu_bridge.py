@@ -52,7 +52,7 @@ def get_vram_status():
     """Check GPU VRAM availability using rocm-smi (accurate, includes Ollama usage)."""
     try:
         import subprocess
-        result = subprocess.run(["rocm-smi", "--showmeminfo", "vram"], 
+        result = subprocess.run(["rocm-smi", "--showmeminfo", "vram"],  # Safe: list args, no shell=True
                                 capture_output=True, text=True, timeout=10)
         lines = result.stdout.strip().split("\n")
         
@@ -306,7 +306,7 @@ def generate_training_data():
                     "score": target,
                     "source": "nexus_darwin",
                 })
-    except:
+    except Exception:
         pass
     
     # 3. Generate byte-level training data

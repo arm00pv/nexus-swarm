@@ -138,7 +138,7 @@ def fetch_file(repo, path, branch="main"):
         })
         with urllib.request.urlopen(r, timeout=30) as resp:
             return resp.read().decode()
-    except:
+    except Exception:
         return None
 
 def create_branch(repo, base_branch, new_branch_name):
@@ -371,7 +371,7 @@ def run_cycle():
                 aleph_inject(f"autonomos:{pr_id}", "session", session_id, "nexus_autonomos", 0.9)
                 aleph_inject(f"autonomos:{pr_id}", "issues_found", str(len(issues)), "nexus_autonomos", 0.9)
                 aleph_inject(f"autonomos:{pr_id}", "judge_score", str(verdict.get("score", 0)), "nexus_autonomos", 0.85)
-            except:
+            except Exception:
                 pass
             
             stats["prs_submitted"] += 1
@@ -407,14 +407,14 @@ def run_cycle():
                     from nexus_darwin import nexus_inject
                     nexus_inject(f"autonomos:{pr_id}", "outcome", "merged", "nexus_autonomos", 1.0)
                     nexus_inject(f"autonomos:{pr_id}", "positive_signal", "true", "nexus_autonomos", 0.95)
-                except:
+                except Exception:
                     pass
                 
                 # Train Mamba on the successful fix pattern
                 try:
                     from mamba_gpu_bridge import generate_training_data
                     generate_training_data()  # Will pick up the new ALEPH entries
-                except:
+                except Exception:
                     pass
                 
             else:
@@ -429,7 +429,7 @@ def run_cycle():
                     from nexus_darwin import nexus_inject
                     nexus_inject(f"autonomos:{pr_id}", "outcome", "rejected", "nexus_autonomos", 0.7)
                     nexus_inject(f"autonomos:{pr_id}", "negative_signal", "true", "nexus_autonomos", 0.5)
-                except:
+                except Exception:
                     pass
     
     # ─── STEP 5: ADAPT — Summary ───

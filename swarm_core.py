@@ -157,7 +157,7 @@ def agent_scout(code, language="python"):
     try:
         # Strategy 1: Direct JSON parse
         issues = json.loads(response.strip())
-    except:
+    except Exception:
         try:
             # Strategy 2: Strip markdown fences
             cleaned = response.strip()
@@ -175,7 +175,7 @@ def agent_scout(code, language="python"):
                 end = cleaned.rindex("]") + 1
                 cleaned = cleaned[start:end]
             issues = json.loads(cleaned.strip())
-        except:
+        except Exception:
             # Strategy 3: Pattern matching fallback — scan code for known vulnerabilities
             issues = []
             lines = code.split("\n")
@@ -226,7 +226,7 @@ def agent_architect(code, issues, language="python"):
         elif "```" in response:
             response = response.split("```")[1].split("```")[0]
         analysis = json.loads(response.strip())
-    except:
+    except Exception:
         analysis = {"architecture_summary": response[:300], "priority_issues": [], "fix_strategy": "manual"}
     
     return {"agent": "architect", "analysis": analysis}
@@ -249,7 +249,7 @@ def agent_forge(code, issues, strategy, language="python"):
             fixed_code = response.split("```")[1].split("```")[0]
         else:
             fixed_code = response
-    except:
+    except Exception:
         pass
     
     return {"agent": "forge", "fixed_code": fixed_code.strip()}
@@ -269,7 +269,7 @@ def agent_judge(original_code, fixed_code, issues, language="python"):
         elif "```" in response:
             response = response.split("```")[1].split("```")[0]
         verdict = json.loads(response.strip())
-    except:
+    except Exception:
         verdict = {"verdict": "unknown", "score": 0, "reasoning": response[:200], "remaining_issues": []}
     
     return {"agent": "judge", "verdict": verdict}
@@ -396,7 +396,7 @@ def swarm_analyze(code, language="python"):
                 cloud_fixed = cloud_response.split(f"```{language}")[1].split("```")[0]
             elif "```" in cloud_response:
                 cloud_fixed = cloud_response.split("```")[1].split("```")[0]
-        except:
+        except Exception:
             pass
         if cloud_fixed and len(cloud_fixed) > 20:
             fixed_code = cloud_fixed.strip()

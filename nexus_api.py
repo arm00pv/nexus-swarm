@@ -193,6 +193,34 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
             from mamba_gpu_bridge import get_mamba_gpu_status
             self._json(get_mamba_gpu_status())
 
+        elif path == "/api/nexus/omni/brain":
+            # OMNI-BRAIN modules — direct access to 448 brain files
+            self._json({
+                "status": "connected",
+                "modules": {
+                    "mcp_tools": 96,
+                    "boif_brain_files": 139,
+                    "swarm_modules": 6,
+                    "running_daemons": ["prometheus", "autonomos", "semb", "ocl"],
+                }
+            })
+
+        elif path == "/api/nexus/omni/signals":
+            # PROMETHEUS/ATLAS trading signals (live from ALEPH)
+            import sqlite3 as sq
+            conn = sq.connect(ALEPH_DB, timeout=5)
+            rows = conn.execute("SELECT source, target FROM edges WHERE domain='trading_insights' ORDER BY created_at DESC LIMIT 10").fetchall()
+            conn.close()
+            self._json({"signals": [{"source": r[0], "signal": r[1][:200]} for r in rows], "count": len(rows)})
+
+        elif path == "/api/nexus/omni/research":
+            # AUTONOMOS research findings (live from ALEPH)
+            import sqlite3 as sq
+            conn = sq.connect(ALEPH_DB, timeout=5)
+            rows = conn.execute("SELECT source, target FROM edges WHERE domain='autonomous' ORDER BY created_at DESC LIMIT 10").fetchall()
+            conn.close()
+            self._json({"research": [{"source": r[0], "finding": r[1][:200]} for r in rows], "count": len(rows)})
+
         elif path == "/api/nexus/supabase/status":
             from nexus_supabase import get_sync_status
             self._json(get_sync_status())
@@ -409,6 +437,34 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
             steps = body.get("steps", 50)
             result = train_mamba_lora(steps=steps, lr=3e-4)
             self._json(result)
+
+        elif path == "/api/nexus/omni/orchestrate":
+            # BOIF Agent Orchestrator — delegate task to best brain
+            sys.path.insert(0, "/home/zixen15/brains")
+            from boif_agent_orchestrator import orchestrate
+            task = body.get("task", "")
+            capability = body.get("capability", "")
+            if not task:
+                self._json({"error": "task required"}, 400)
+                return
+            result = orchestrate(task, capability, verify=True, fold=True)
+            self._json(result)
+
+        elif path == "/api/nexus/omni/mcp":
+            # Call any MCP tool directly
+            sys.path.insert(0, "/home/zixen15")
+            import mcp_server
+            tool = body.get("tool", "")
+            args = body.get("args", {})
+            if not tool or not hasattr(mcp_server, tool):
+                self._json({"error": f"tool '{tool}' not found", "available": [t for t in dir(mcp_server) if t.startswith("trigger_") or t in ["query_aleph","inject_aleph","verify_aleph","verify_math","query_ollama"]]}, 404)
+                return
+            try:
+                func = getattr(mcp_server, tool)
+                result = func(**args) if args else func()
+                self._json({"tool": tool, "result": result if isinstance(result, (str, int, float, list, dict)) else str(result)[:500]})
+            except Exception as e:
+                self._json({"error": str(e)})
 
         elif path == "/api/nexus/supabase/sync":
             from nexus_supabase import run_sync

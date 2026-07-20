@@ -55,7 +55,9 @@ class SecurityASTVisitor(ast.NodeVisitor):
         ("ctypes", "CDLL"): "Foreign function interface — can execute arbitrary code",
     }
     
-    SQL_KEYWORDS = {"SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER"}
+    # Use regex word boundaries to avoid false positives like "Created" matching "CREATE"
+    import re
+    SQL_PATTERN = re.compile(r'\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER)\b', re.IGNORECASE)
     
     def __init__(self):
         self.issues = []
@@ -131,8 +133,8 @@ class SecurityASTVisitor(ast.NodeVisitor):
         # Check if this f-string contains SQL keywords
         for child in ast.walk(node):
             if isinstance(child, ast.Constant) and isinstance(child.value, str):
-                sql_upper = child.value.upper()
-                if any(kw in sql_upper for kw in self.SQL_KEYWORDS):
+                # Use word boundary matching to avoid false positives
+                if self.SQL_PATTERN.search(child.value):
                     # Check if the f-string contains variables (FormattedValue nodes)
                     has_format_values = any(isinstance(n, ast.FormattedValue) for n in ast.walk(node))
                     if has_format_values:
@@ -146,8 +148,7 @@ class SecurityASTVisitor(ast.NodeVisitor):
             # Check if either side contains SQL keywords
             for child in ast.walk(node):
                 if isinstance(child, ast.Constant) and isinstance(child.value, str):
-                    sql_upper = child.value.upper()
-                    if any(kw in sql_upper for kw in self.SQL_KEYWORDS):
+                    if self.SQL_PATTERN.search(child.value):
                         # Check if the other side is a variable (not a constant)
                         left_is_var = isinstance(node.left, (ast.Name, ast.Attribute, ast.Subscript))
                         right_is_var = isinstance(node.right, (ast.Name, ast.Attribute, ast.Subscript))

@@ -221,13 +221,17 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
             conn.close()
             self._json({"research": [{"source": r[0], "finding": r[1][:200]} for r in rows], "count": len(rows)})
 
-        elif path == "/api/nexus/ast/analyze":
+        elif path == "/api/nexus/ast/info":
             code_param = parse_qs(parsed.query).get("code", [""])[0]
             if code_param:
                 from nexus_ast import analyze_code
                 self._json(analyze_code(code_param))
             else:
                 self._json({"error": "code parameter required"}, 400)
+
+        elif path == "/api/nexus/scan/status":
+            from nexus_unified import get_unified_status
+            self._json(get_unified_status())
 
         elif path == "/api/nexus/sbom/status":
             from nexus_sbom import get_sbom_status
@@ -513,6 +517,17 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
                 return
             self._json(analyze_code(code_to_analyze, body.get("filename", "unknown")))
 
+        elif path == "/api/nexus/scan":
+            from nexus_unified import unified_scan
+            repo = body.get("repo", "")
+            branch = body.get("branch", "main")
+            create_issues = body.get("create_issues", False)
+            if not repo:
+                self._json({"error": "repo required"}, 400)
+                return
+            result = unified_scan(repo, branch, create_issues)
+            self._json(result)
+
         elif path == "/api/nexus/sbom/scan":
             from nexus_sbom import scan_repo
             repo = body.get("repo", "")
@@ -534,25 +549,28 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
             self._json(result)
 
         elif path == "/api/nexus/webhook":
-            # GitHub webhook handler — triggered on push/PR events
+            # GitHub webhook handler — triggers unified scan on push
             event = self.headers.get("X-GitHub-Event", "unknown")
             if event == "push":
                 repo = body.get("repository", {}).get("full_name", "")
-                commits = body.get("commits", [])
-                files_changed = []
-                for commit in commits:
-                    files_changed.extend(commit.get("added", []))
-                    files_changed.extend(commit.get("modified", []))
-                py_files = [f for f in files_changed if f.endswith(".py")]
-                
+                # Trigger unified scan asynchronously
+                try:
+                    from nexus_unified import unified_scan
+                    import threading
+                    def run_scan():
+                        try:
+                            unified_scan(repo, "main", create_issues=True)
+                        except:
+                            pass
+                    threading.Thread(target=run_scan, daemon=True).start()
+                except:
+                    pass
                 self._json({
-                    "status": "received",
+                    "status": "scan_triggered",
                     "event": "push",
                     "repo": repo,
-                    "files_to_analyze": py_files[:5],
-                    "message": f"Queued {len(py_files)} Python files for NEXUS analysis",
+                    "message": "NEXUS unified scan triggered (AST + Diff + SBOM)",
                 })
-                # TODO: Queue analysis for these files
             elif event == "pull_request":
                 pr = body.get("pull_request", {})
                 self._json({

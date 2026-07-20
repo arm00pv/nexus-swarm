@@ -119,11 +119,12 @@ class LLMScheduler:
         self.running = False
     
     def submit(self, model, system_prompt, user_prompt, priority=Priority.NORMAL, 
-               max_tokens=500, temperature=0.3, timeout=120) -> str:
+               max_tokens=-1, temperature=0.2, timeout=120, think=True) -> str:
         """
         Submit an LLM request to the queue and wait for the result.
-        Returns the response text. Blocks until the request completes.
-        No hardcoded timeout on the GPU — the request gets its turn.
+        max_tokens=-1: No limit — let the model generate until it's done.
+        think=True (default): Maximum reasoning capacity — scheduler queues so no contention.
+        Token limits only apply to external API users via the gateway, not internal agents.
         """
         if not self.running:
             self.start()
@@ -138,6 +139,7 @@ class LLMScheduler:
             temperature=temperature,
             request_id=request_id,
         )
+        req.think = think
         
         self.metrics["total_requests"] += 1
         sys.stderr.write(f"[SCHEDULER] Queued {request_id} (model={model}, priority={priority.name})\n")
@@ -195,7 +197,7 @@ class LLMScheduler:
                             {"role": "user", "content": req.user_prompt},
                         ],
                         "stream": False,
-                        "think": False,
+                        "think": req.think if hasattr(req, 'think') else False,
                         "options": {
                             "temperature": req.temperature,
                             "num_predict": req.max_tokens,
@@ -204,7 +206,7 @@ class LLMScheduler:
                     data = json.dumps(ollama_req).encode()
                     r = urllib.request.Request(OLLAMA_CHAT_URL, data=data, 
                                               headers={"Content-Type": "application/json"})
-                    with urllib.request.urlopen(r, timeout=180) as resp:
+                    with urllib.request.urlopen(r, timeout=600) as resp:  # 10 min for unlimited generation
                         result = json.loads(resp.read())
                         req.response = result.get("message", {}).get("content", "")
                         req.completed_at = time.time()
@@ -359,18 +361,11 @@ class LLMScheduler:
 SCHEDULER = LLMScheduler()
 
 def schedule_llm(model, system_prompt, user_prompt, priority=Priority.NORMAL, 
-                 max_tokens=500, temperature=0.3, timeout=180):
+                 max_tokens=-1, temperature=0.2, timeout=180, think=True):
     """
     Submit an LLM request through the VRAM-aware scheduler.
-    This replaces direct call_llm() in swarm_core.py.
-    
-    Priority mapping for NEXUS agents:
-      FORGE     → CRITICAL (core value)
-      JUDGE     → HIGH
-      ARCHITECT → HIGH
-      SCOUT     → NORMAL
-      SCRIBE    → NORMAL
-      Background → LOW
+    max_tokens=-1: No limit for internal agents. Token limits only for external API users.
+    think=True (default): Maximum reasoning for all models — scheduler handles queuing.
     """
     return SCHEDULER.submit(
         model=model,
@@ -380,7 +375,8 @@ def schedule_llm(model, system_prompt, user_prompt, priority=Priority.NORMAL,
         max_tokens=max_tokens,
         temperature=temperature,
         timeout=timeout,
-    )
+        think=think,
+)
 
 
 # ============ TEST ============

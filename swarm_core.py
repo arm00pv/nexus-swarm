@@ -101,16 +101,19 @@ def aleph_query(concept, limit=10):
 # Import the VRAM-aware LLM scheduler
 from llm_scheduler import schedule_llm, Priority, SCHEDULER
 
-def call_llm(model, system_prompt, user_prompt, timeout=TIMEOUT_SECONDS, priority=Priority.NORMAL):
-    """Call an Ollama model through the VRAM-aware scheduler. No hardcoded timeouts — gets its turn."""
+def call_llm(model, system_prompt, user_prompt, timeout=TIMEOUT_SECONDS, priority=Priority.NORMAL, think=True):
+    """Call an Ollama model through the VRAM-aware scheduler. Thinking mode ON. No token limits for internal agents."""
+    is_cloud = 'cloud' in model
+    max_tokens = -1 if is_cloud else -1  # -1 = no limit, let the model decide when it's done
     return schedule_llm(
         model=model,
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         priority=priority,
-        max_tokens=500,
-        temperature=0.3,
+        max_tokens=max_tokens,
+        temperature=0.2,
         timeout=timeout,
+        think=think,
     )
 
 # ============ LEAN4 VERIFY ============
@@ -385,7 +388,7 @@ def swarm_analyze(code, language="python"):
         sys.stderr.write(f"[NEXUS] FORGE cloud fallback (local score {verdict.get('score', 0)} < {CLOUD_FALLBACK_THRESHOLD})...")
         cloud_system = "You are FORGE, an expert code generator. Fix ALL security issues while preserving functionality. Output ONLY the fixed code, no explanations."
         cloud_prompt = f"Fix this {language} code:\n```\n{code}\n```\nIssues to fix:\n{json.dumps(issues[:5])}\nFix strategy: {strategy}\n\nOutput the complete fixed code."
-        cloud_response = call_llm(AGENT_MODELS["forge_cloud"], cloud_system, cloud_prompt, timeout=60, priority=Priority.CRITICAL)
+        cloud_response = call_llm(AGENT_MODELS["forge_cloud"], cloud_system, cloud_prompt, timeout=180, priority=Priority.CRITICAL, think=True)  # Max thinking for cloud
         # Extract code
         cloud_fixed = cloud_response
         try:

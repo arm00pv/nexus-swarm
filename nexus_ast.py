@@ -135,6 +135,10 @@ class SecurityASTVisitor(ast.NodeVisitor):
             if isinstance(child, ast.Constant) and isinstance(child.value, str):
                 # Use word boundary matching to avoid false positives
                 if self.SQL_PATTERN.search(child.value):
+                    # Skip log messages (stderr.write, print, logging)
+                    val_lower = child.value.lower()
+                    if any(val_lower.startswith(p) for p in ['[', 'failed to', 'error:', 'warning:', 'debug:']):
+                        break
                     # Check if the f-string contains variables (FormattedValue nodes)
                     has_format_values = any(isinstance(n, ast.FormattedValue) for n in ast.walk(node))
                     if has_format_values:

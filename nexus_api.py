@@ -221,6 +221,14 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
             conn.close()
             self._json({"research": [{"source": r[0], "finding": r[1][:200]} for r in rows], "count": len(rows)})
 
+        elif path == "/api/nexus/ast/analyze":
+            code_param = parse_qs(parsed.query).get("code", [""])[0]
+            if code_param:
+                from nexus_ast import analyze_code
+                self._json(analyze_code(code_param))
+            else:
+                self._json({"error": "code parameter required"}, 400)
+
         elif path == "/api/nexus/sbom/status":
             from nexus_sbom import get_sbom_status
             self._json(get_sbom_status())
@@ -496,6 +504,14 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
                     return
             result = scan_commit(repo, sha)
             self._json(result)
+
+        elif path == "/api/nexus/ast/analyze":
+            from nexus_ast import analyze_code
+            code_to_analyze = body.get("code", "")
+            if not code_to_analyze:
+                self._json({"error": "code required"}, 400)
+                return
+            self._json(analyze_code(code_to_analyze, body.get("filename", "unknown")))
 
         elif path == "/api/nexus/sbom/scan":
             from nexus_sbom import scan_repo

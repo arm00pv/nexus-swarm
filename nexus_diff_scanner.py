@@ -37,6 +37,7 @@ sys.path.insert(0, "/home/zixen15/brains")
 
 from llm_scheduler import schedule_llm, Priority, SCHEDULER
 from nexus_supabase import supabase_insert
+from nexus_ast import analyze_code as ast_analyze
 
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 NEXUS_DB = "/home/zixen15/nexus/diff_scans.db"
@@ -130,38 +131,39 @@ def scan_patch(patch, filename):
     if not added:
         return {"issues": [], "added_lines": 0, "scanner": "diff"}
 
-    # 1. INSTANT pattern match on added lines (no GPU needed, < 1ms)
-    pattern_issues = []
-    checks = {
-        "eval(": "Arbitrary code execution via eval()",
-        "exec(": "Arbitrary code execution via exec()",
-        "os.system(": "Command injection via os.system()",
-        "subprocess.call(": "Potential command injection",
-        "shell=True": "Shell injection risk (shell=True)",
-        "pickle.load": "Insecure deserialization (pickle)",
-        "yaml.load(": "Insecure YAML loading",
-        "password": "Hardcoded password/credential",
-        "secret": "Hardcoded secret",
-        "api_key": "Hardcoded API key",
-        "SELECT * FROM": "Raw SQL query (potential injection)",
-        "+ user_": "String concatenation in query (SQL injection)",
-        "__import__": "Dynamic import risk",
-        "render(": "Potential XSS via render()",
-        "innerHTML": "Potential XSS via innerHTML",
-    }
-
-    for line_info in added:
-        code_lower = line_info["code"].lower()
-        for pattern, desc in checks.items():
-            if pattern.lower() in code_lower:
-                pattern_issues.append({
-                    "line": line_info["patch_line"],
-                    "severity": "critical" if pattern in ["eval(", "exec(", "os.system(", "shell=True"] else "high",
-                    "type": "security",
-                    "description": desc,
-                    "code": line_info["code"][:100],
-                    "file": filename,
-                })
+    # 1. AST analysis on the complete patch (structural, catches obfuscated vulns)
+    # Reconstruct the changed code from the patch for AST parsing
+    changed_code = "\n".join([l["code"] for l in added])
+    try:
+        ast_result = ast_analyze(changed_code, filename)
+        pattern_issues = ast_result.get("issues", [])
+        for issue in pattern_issues:
+            issue["file"] = filename
+            issue["scanner"] = "ast"
+    except Exception as e:
+        # Fallback to simple pattern matching
+        pattern_issues = []
+        checks = {
+            "eval(": "Arbitrary code execution via eval()",
+            "exec(": "Arbitrary code execution via exec()",
+            "os.system(": "Command injection via os.system()",
+            "shell=True": "Shell injection risk (shell=True)",
+            "pickle.load": "Insecure deserialization (pickle)",
+            "password": "Hardcoded password/credential",
+        }
+        for line_info in added:
+            code_lower = line_info["code"].lower()
+            for pattern, desc in checks.items():
+                if pattern.lower() in code_lower:
+                    pattern_issues.append({
+                        "line": line_info["patch_line"],
+                        "severity": "critical" if pattern in ["eval(", "exec(", "os.system(", "shell=True"] else "high",
+                        "type": "security",
+                        "description": desc,
+                        "code": line_info["code"][:100],
+                        "file": filename,
+                        "scanner": "pattern",
+                    })
 
     # 2. LLM deep analysis — fully optional, non-blocking, 5s max
     llm_issues = []

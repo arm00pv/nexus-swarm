@@ -126,10 +126,21 @@ def scan_code_ast(repo, branch, files):
             issue["file"] = filepath
             all_issues.append(issue)
     
+    # Also scan for secrets in each file
+    secret_issues = []
+    for filepath in files:
+        file_content = fetch_file(repo, filepath, branch)
+        if file_content:
+            secrets = scan_secrets(file_content, filepath)
+            secret_issues.extend(secrets)
+    
+    all_issues.extend(secret_issues)
+    
     return {
-        "scanner": "ast",
+        "scanner": "ast+secrets",
         "files_scanned": files_scanned,
         "issues": all_issues,
+        "secrets_found": len(secret_issues),
         "critical": sum(1 for i in all_issues if i["severity"] == "critical"),
         "high": sum(1 for i in all_issues if i["severity"] == "high"),
         "medium": sum(1 for i in all_issues if i["severity"] == "medium"),
@@ -155,9 +166,17 @@ def scan_diff(repo, branch):
     }
 
 def scan_sbom(repo, branch):
-    """Run SBOM + vulnerability scanner."""
+    """Run SBOM + vulnerability scanner + Dockerfile scan."""
     from nexus_sbom import scan_repo
     result = scan_repo(repo, branch)
+    
+    # Also scan Dockerfiles
+    docker_issues = []
+    for df_path in ["Dockerfile", "docker-compose.yml", "docker-compose.yaml", ".dockerignore"]:
+        content = fetch_file(repo, df_path, branch)
+        if content:
+            docker_issues = scan_dockerfile(content, df_path)
+    
     return {
         "scanner": "sbom",
         "components": result.get("total_components", 0),
@@ -166,6 +185,7 @@ def scan_sbom(repo, branch):
         "total_vulns": result.get("total_vulnerabilities", 0),
         "sbom": result.get("sbom"),
         "sources": result.get("sources", []),
+        "dockerfile_issues": docker_issues,
     }
 
 # ============ UNIFIED SCAN ============
@@ -223,9 +243,10 @@ def unified_scan(repo, branch="main", create_issues=False):
     total_vulns = sbom_result.get("total_vulns", 0)
     
     # Calculate security score (0-100, higher is better)
+    # Only CRITICAL and HIGH affect score. LOW/MEDIUM are informational.
     critical_count = sum(1 for i in all_code_issues + all_diff_issues if i.get("severity") == "critical")
     high_count = sum(1 for i in all_code_issues + all_diff_issues if i.get("severity") == "high")
-    score = max(0, 100 - (critical_count * 20) - (high_count * 10) - (total_vulns * 5))
+    score = max(0, 100 - (critical_count * 25) - (high_count * 10) - (total_vulns * 5))
     
     duration = time.time() - started
     
@@ -316,6 +337,8 @@ def unified_scan(repo, branch="main", create_issues=False):
     # Sync to Supabase
     try:
         from nexus_supabase import supabase_insert
+from nexus_secrets import scan_secrets
+from nexus_dockerfile import scan_dockerfile
         supabase_insert([{
             "id": f"unified_{scan_id}",
             "topic": f"nexus_unified:{repo}",

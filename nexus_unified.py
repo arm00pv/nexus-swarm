@@ -29,6 +29,8 @@ import json
 import time
 import threading
 import sqlite3
+from nexus_secrets import scan_secrets
+from nexus_dockerfile import scan_dockerfile
 import urllib.request
 
 sys.path.insert(0, "/home/zixen15/nexus")
@@ -337,8 +339,6 @@ def unified_scan(repo, branch="main", create_issues=False):
     # Sync to Supabase
     try:
         from nexus_supabase import supabase_insert
-from nexus_secrets import scan_secrets
-from nexus_dockerfile import scan_dockerfile
         supabase_insert([{
             "id": f"unified_{scan_id}",
             "topic": f"nexus_unified:{repo}",

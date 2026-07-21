@@ -281,6 +281,37 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
             results = aleph_query(session_id, limit=10)
             self._json({"session_id": session_id, "edges": results, "count": len(results)})
 
+        elif path == "/api/nexus/guardian/check":
+            # NEXUS GUARDIAN — AI Agent Firewall
+            from nexus_guardian import Guardian
+            tool_name = body.get("tool_name", "")
+            tool_input = body.get("tool_input", "")
+            agent_reasoning = body.get("agent_reasoning", "")
+            agent_code = body.get("agent_code", "")
+            agent_name = body.get("agent_name", "api_agent")
+            
+            # Create or reuse guardian
+            if not hasattr(self, '_guardian') or self._guardian.agent_name != agent_name:
+                self._guardian = Guardian(agent_name=agent_name, agent_code=agent_code, aleph_logging=True)
+            
+            decision = self._guardian.check(tool_name, tool_input, agent_reasoning)
+            self._json(decision)
+
+        elif path == "/api/nexus/guardian/stats":
+            from nexus_guardian import Guardian
+            if hasattr(self, '_guardian'):
+                self._json(self._guardian.get_stats())
+            else:
+                self._json({"error": "No guardian active. Call /api/nexus/guardian/check first."})
+
+        elif path == "/api/nexus/guardian/audit":
+            from nexus_guardian import Guardian
+            if hasattr(self, '_guardian'):
+                limit = int(body.get("limit", 50))
+                self._json({"audit_log": self._guardian.get_audit_log(limit)})
+            else:
+                self._json({"audit_log": []})
+
         else:
             self._json({"error": "Not found", "path": path}, 404)
 
@@ -701,6 +732,37 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
             result = auto_fix_repo(repo, branch, max_fixes)
             
             self._json(result)
+
+        elif path == "/api/nexus/guardian/check":
+            # NEXUS GUARDIAN — AI Agent Firewall
+            from nexus_guardian import Guardian
+            tool_name = body.get("tool_name", "")
+            tool_input = body.get("tool_input", "")
+            agent_reasoning = body.get("agent_reasoning", "")
+            agent_code = body.get("agent_code", "")
+            agent_name = body.get("agent_name", "api_agent")
+            
+            # Create or reuse guardian
+            if not hasattr(self, '_guardian') or self._guardian.agent_name != agent_name:
+                self._guardian = Guardian(agent_name=agent_name, agent_code=agent_code, aleph_logging=True)
+            
+            decision = self._guardian.check(tool_name, tool_input, agent_reasoning)
+            self._json(decision)
+
+        elif path == "/api/nexus/guardian/stats":
+            from nexus_guardian import Guardian
+            if hasattr(self, '_guardian'):
+                self._json(self._guardian.get_stats())
+            else:
+                self._json({"error": "No guardian active. Call /api/nexus/guardian/check first."})
+
+        elif path == "/api/nexus/guardian/audit":
+            from nexus_guardian import Guardian
+            if hasattr(self, '_guardian'):
+                limit = int(body.get("limit", 50))
+                self._json({"audit_log": self._guardian.get_audit_log(limit)})
+            else:
+                self._json({"audit_log": []})
 
         else:
             self._json({"error": "Not found", "path": path}, 404)

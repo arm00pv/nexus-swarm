@@ -11,7 +11,7 @@ Agents:
   SCOUT     → qwen3.5:0.8b   (fast scanning)
   ARCHITECT → qwen3.5:9b     (deep analysis)
   FORGE     → gemma4:latest  (code generation)
-  JUDGE     → kimi-k2.6:cloud (complex reasoning)
+  JUDGE     → local model with cloud fallback (deepseek-v4-flash:cloud)
   PROVER    → Lean4           (formal verification)
   GUARDIAN  → Conscience      (anti-hallucination)
   SCRIBE    → qwen3.5:4b     (documentation)

@@ -194,6 +194,68 @@ def check_pr_status(repo, pr_number):
         }
     return None
 
+
+
+# ============ WATCHTOWER QUEUE PROCESSOR ============
+def check_watchtower_queue():
+    """Check the Watchtower API for queued audits and process them."""
+    import urllib.request
+    try:
+        # Get queued audits from Watchtower
+        url = "https://marquezhv.com/api/nexus/audit/queued"
+        req = urllib.request.Request(url, headers={
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/json",
+        })
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+            audits = data.get("audits", [])
+    except Exception as e:
+        sys.stderr.write(f"[AUTONOMOS] Queue check failed: {e}\n")
+        return []
+    
+    results = []
+    for audit in audits:
+        repo = audit.get("repo", "")
+        branch = audit.get("branch", "main")
+        audit_id = audit.get("id", "")
+        
+        if not repo:
+            continue
+        
+        sys.stderr.write(f"[AUTONOMOS] Processing queued audit: {repo}\n")
+        
+        # Run unified scan
+        try:
+            from nexus_unified import unified_scan
+            scan_result = unified_scan(repo, branch, create_issues=True)
+            results.append({
+                "audit_id": audit_id,
+                "repo": repo,
+                "score": scan_result.get("security_score", 0),
+                "issues": scan_result.get("summary", {}).get("code_issues", 0),
+                "vulns": scan_result.get("summary", {}).get("dependency_vulns", 0),
+            })
+        except Exception as e:
+            sys.stderr.write(f"[AUTONOMOS] Scan failed for {repo}: {e}\n")
+            results.append({"audit_id": audit_id, "repo": repo, "error": str(e)})
+        
+        # Mark audit as processed on Watchtower
+        try:
+            update_url = f"https://marquezhv.com/api/nexus/audit/update?id={audit_id}"
+            update_data = json.dumps({"status": "completed", "result": json.dumps(scan_result)[:2000]}).encode()
+            req = urllib.request.Request(update_url, data=update_data, headers={
+                "Authorization": f"token {GITHUB_TOKEN}",
+                "Content-Type": "application/json",
+            })
+            req.get_method = lambda: "POST"
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                resp.read()
+        except:
+            pass
+    
+    return results
+
 # ============ AUTONOMOUS LOOP ============
 def run_cycle():
     """

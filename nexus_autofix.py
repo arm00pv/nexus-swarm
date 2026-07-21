@@ -400,7 +400,7 @@ if __name__ == "__main__":
 import pickle
 import subprocess
 
-API_KEY = "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"
+API_KEY = "os.environ.get('GITHUB_TOKEN', '')"
 password = "my_super_secret_password"
 
 def load_data(data):

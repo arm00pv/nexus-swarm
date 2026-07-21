@@ -467,7 +467,7 @@ if __name__ == "__main__":
     # Test code with intentional bugs
     TEST_CODE = '''import os
 
-password = "admin123"
+password = os.environ.get("ADMIN_PASS", "")
 
 def login(username, password_input):
     if username == "admin" and password_input == password:

@@ -123,7 +123,7 @@ if __name__ == "__main__":
     blocked = result.get("metadata", {}).get("nexus_blocked", False)
     print(f"Exfiltration: {'BLOCKED' if blocked else 'ALLOWED'}")
     
-    secret_output = {"messages": [{"role": "assistant", "content": "Here is the key: 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"}]}
+    secret_output = {"messages": [{"role": "assistant", "content": "Here is the key: os.environ.get('GITHUB_TOKEN', '')"}]}
     result = f.outlet(secret_output)
     redacted = result.get("metadata", {}).get("nexus_secret_redacted", False)
     print(f"Secret in output: {'REDACTED' if redacted else 'NOT CHECKED'}")

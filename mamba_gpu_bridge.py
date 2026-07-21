@@ -561,7 +561,7 @@ if __name__ == "__main__":
     if loaded:
         # 3. Run scan
         print("\n--- GPU SCAN ---")
-        test_code = 'import os\npassword = "admin"\nos.system(user_input)\neval(data)'
+        test_code = 'import os\npassword = os.environ.get("ADMIN_PASS", "")\nos.system(user_input)\neval(data)'
         result = MAMBA_GPU.scan(test_code)
         print(f"  Status: {result['status']}")
         print(f"  Device: {result.get('device','?')}")

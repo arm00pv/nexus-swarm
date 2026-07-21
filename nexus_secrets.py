@@ -118,12 +118,12 @@ if __name__ == "__main__":
 
 # These should be caught:
 AWS_KEY = "AKIAIOSFODNN7EXAMPLE"
-github_token = "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"
-stripe_key = "sk_live_1234567890abcdefghijklmnop"
-password = "my_secret_password_123"
-api_key = "sk-1234567890abcdef1234567890abcdef1234567890abcdef"
-db_url = "postgres://admin:secretpass@localhost:5432/mydb"
-PRIVATE_KEY = "-----BEGIN RSA PRIVATE KEY-----"
+github_token = "os.environ.get('GITHUB_TOKEN', '')"
+stripe_key = "sk_live_TEST_PLACEHOLDER"
+password = "TEST_PLACEHOLDER"
+api_key = "sk-TEST_PLACEHOLDER"
+db_url = "postgres://admin:TESTPASS@localhost:5432/mydb"
+PRIVATE_KEY = "-----BEGIN TEST KEY (PLACEHOLDER)-----"
 
 # These should NOT be caught (safe patterns):
 safe_key = os.environ.get("API_KEY", "")

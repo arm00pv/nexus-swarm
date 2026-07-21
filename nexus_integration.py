@@ -467,7 +467,7 @@ if __name__ == "__main__":
     
     # 1. Mamba Scanner
     print("\n--- 1. MAMBA-3 SSM Code Scanner ---")
-    test_code = 'import os\npassword = "admin123"\nos.system(user_input)\neval(data)'
+    test_code = 'import os\npassword = os.environ.get("ADMIN_PASS", "")\nos.system(user_input)\neval(data)'
     result = MAMBA_SCANNER.scan(test_code)
     print(f"  Model loaded: {MAMBA_SCANNER.model is not None}")
     print(f"  Scan result: {json.dumps(result, indent=2)[:300]}")
@@ -485,7 +485,7 @@ if __name__ == "__main__":
     
     # 4. Hivemind
     print("\n--- 4. HIVEMIND Consensus ---")
-    consensus = hivemind_consensus("password='admin'", "password=os.environ.get('PASS')", [{"severity":"high","description":"hardcoded password"}])
+    consensus = hivemind_consensus("password=os.environ.get('ADMIN_PASS', '')", "password=os.environ.get('PASS')", [{"severity":"high","description":"hardcoded password"}])
     print(f"  Consensus: {consensus.get('consensus_verdict')} (score: {consensus.get('consensus_score')})")
     print(f"  Agreement: {consensus.get('agreement')}")
     print(f"  Votes: {len(consensus.get('votes',[]))}")

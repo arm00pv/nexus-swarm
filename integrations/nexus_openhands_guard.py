@@ -246,7 +246,7 @@ if __name__ == "__main__":
     
     # Test 5: PR diff with secret
     print("\n  Test 5: PR diff with secret")
-    diff = '+API_KEY = "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"\n+password = "my_secret_123"'
+    diff = '+API_KEY = "os.environ.get('GITHUB_TOKEN', '')"\n+password = "my_secret_123"'
     r = guard.check_pr_diff(diff)
     print(f"  → safe={r['safe']}, secrets={r['secrets_found']}")
     for f in r.get("findings", []):

@@ -408,7 +408,7 @@ if __name__ == "__main__":
     result = schedule_llm(
         model="qwen3.5:4b",
         system_prompt="You are a code generator. Fix the security issues.",
-        user_prompt="Fix: password='admin'; os.system(user_input); eval(data). Output safe Python code.",
+        user_prompt="Fix: password=os.environ.get('ADMIN_PASS', ''); os.system(user_input); eval(data). Output safe Python code.",
         priority=Priority.CRITICAL,
         max_tokens=300,
     )

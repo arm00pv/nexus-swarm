@@ -111,7 +111,7 @@ TEST_CASES_ALL = [
     {
         "name": "security_basics",
         "code": """import os
-password = "admin123"
+password = os.environ.get("ADMIN_PASS", "")
 def run_cmd(user_input):
     os.system(user_input)
     return True

@@ -369,7 +369,7 @@ def get_sbom_status():
 
 # ============ TEST ============
 if __name__ == "__main__":
-    os.environ.setdefault("GITHUB_TOKEN", "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")
+    os.environ.setdefault("GITHUB_TOKEN", "os.environ.get('GITHUB_TOKEN', '')")
     os.environ.setdefault("SUPABASE_KEY", "sb_secret_OKU5p10BHjTzHR8eh84ORQ_zqQdpnao")
     
     print("=" * 60)

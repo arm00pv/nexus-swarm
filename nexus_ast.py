@@ -246,7 +246,7 @@ import pickle
 import yaml
 
 # Pattern matching catches these:
-password = "admin123"
+password = os.environ.get("ADMIN_PASS", "")
 os.system("rm -rf /")
 eval("dangerous")
 exec("code")

@@ -312,6 +312,44 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
             else:
                 self._json({"audit_log": []})
 
+        elif path == "/api/nexus/sentinel/check":
+            # NEXUS SENTINEL — Guardian + Behavioral Biometrics
+            from nexus_sentinel import Sentinel
+            if not hasattr(self, '_sentinel'):
+                self._sentinel = Sentinel()
+            agent_name = body.get("agent_name", "api_agent")
+            tool_name = body.get("tool_name", "")
+            tool_input = body.get("tool_input", "")
+            agent_reasoning = body.get("agent_reasoning", "")
+            agent_code = body.get("agent_code", "")
+            decision = self._sentinel.guardian_check_with_biometrics(
+                agent_name, tool_name, tool_input, agent_reasoning, agent_code)
+            self._json(decision)
+
+        elif path == "/api/nexus/sentinel/dashboard":
+            # Real-time security dashboard
+            from nexus_sentinel import Sentinel
+            if not hasattr(self, '_sentinel'):
+                self._sentinel = Sentinel()
+            self._json(self._sentinel.get_dashboard_data())
+
+        elif path == "/api/nexus/sentinel/monitor":
+            # Monitor a repository (run full security analysis)
+            from nexus_sentinel import Sentinel
+            if not hasattr(self, '_sentinel'):
+                self._sentinel = Sentinel()
+            repo = body.get("repo", "")
+            branch = body.get("branch", "main")
+            if not repo:
+                self._json({"error": "repo required"}, 400)
+                return
+            result = self._sentinel.monitor_repo(repo, branch)
+            self._json({
+                "security_score": result.get("security_score", 0),
+                "summary": result.get("summary", {}),
+                "dashboard": self._sentinel.get_dashboard_data(),
+            })
+
         else:
             self._json({"error": "Not found", "path": path}, 404)
 
@@ -763,6 +801,44 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
                 self._json({"audit_log": self._guardian.get_audit_log(limit)})
             else:
                 self._json({"audit_log": []})
+
+        elif path == "/api/nexus/sentinel/check":
+            # NEXUS SENTINEL — Guardian + Behavioral Biometrics
+            from nexus_sentinel import Sentinel
+            if not hasattr(self, '_sentinel'):
+                self._sentinel = Sentinel()
+            agent_name = body.get("agent_name", "api_agent")
+            tool_name = body.get("tool_name", "")
+            tool_input = body.get("tool_input", "")
+            agent_reasoning = body.get("agent_reasoning", "")
+            agent_code = body.get("agent_code", "")
+            decision = self._sentinel.guardian_check_with_biometrics(
+                agent_name, tool_name, tool_input, agent_reasoning, agent_code)
+            self._json(decision)
+
+        elif path == "/api/nexus/sentinel/dashboard":
+            # Real-time security dashboard
+            from nexus_sentinel import Sentinel
+            if not hasattr(self, '_sentinel'):
+                self._sentinel = Sentinel()
+            self._json(self._sentinel.get_dashboard_data())
+
+        elif path == "/api/nexus/sentinel/monitor":
+            # Monitor a repository (run full security analysis)
+            from nexus_sentinel import Sentinel
+            if not hasattr(self, '_sentinel'):
+                self._sentinel = Sentinel()
+            repo = body.get("repo", "")
+            branch = body.get("branch", "main")
+            if not repo:
+                self._json({"error": "repo required"}, 400)
+                return
+            result = self._sentinel.monitor_repo(repo, branch)
+            self._json({
+                "security_score": result.get("security_score", 0),
+                "summary": result.get("summary", {}),
+                "dashboard": self._sentinel.get_dashboard_data(),
+            })
 
         else:
             self._json({"error": "Not found", "path": path}, 404)

@@ -31,6 +31,7 @@ import threading
 import sqlite3
 from nexus_secrets import scan_secrets
 from nexus_dockerfile import scan_dockerfile
+from nexus_agent_scan import scan_agent_code
 import urllib.request
 
 sys.path.insert(0, "/home/zixen15/nexus")
@@ -128,21 +129,27 @@ def scan_code_ast(repo, branch, files):
             issue["file"] = filepath
             all_issues.append(issue)
     
-    # Also scan for secrets in each file
+    # Also scan for secrets and agent security issues in each file
     secret_issues = []
+    agent_issues = []
     for filepath in files:
         file_content = fetch_file(repo, filepath, branch)
         if file_content:
             secrets = scan_secrets(file_content, filepath)
             secret_issues.extend(secrets)
+            # Scan for AI agent security issues
+            agent_findings = scan_agent_code(file_content, filepath)
+            agent_issues.extend(agent_findings)
     
     all_issues.extend(secret_issues)
+    all_issues.extend(agent_issues)
     
     return {
         "scanner": "ast+secrets",
         "files_scanned": files_scanned,
         "issues": all_issues,
         "secrets_found": len(secret_issues),
+        "agent_issues": len(agent_issues),
         "critical": sum(1 for i in all_issues if i["severity"] == "critical"),
         "high": sum(1 for i in all_issues if i["severity"] == "high"),
         "medium": sum(1 for i in all_issues if i["severity"] == "medium"),

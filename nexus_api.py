@@ -249,6 +249,30 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
             from nexus_autonomos import get_status
             self._json(get_status())
 
+        elif path == "/api/nexus/injection/info":
+            from nexus_injection import INJECTION_PATTERNS
+            self._json({
+                "scanner": "prompt_injection",
+                "patterns": len(INJECTION_PATTERNS),
+                "categories": ["override", "jailbreak", "smuggling", "escape", "social",
+                              "capability", "exfiltration", "tool_abuse", "encoding", "statistical"],
+                "endpoints": {
+                    "scan": "POST /api/nexus/injection/scan {text, context}",
+                },
+            })
+
+        elif path == "/api/nexus/agent/info":
+            self._json({
+                "scanner": "ai_agent_security",
+                "checks": ["unrestricted_tool", "injection_surface", "no_human_loop",
+                          "shell_execution", "shell_injection", "unrestricted_file",
+                          "no_error_handling", "no_output_validation", "pickle_deserialization"],
+                "endpoints": {
+                    "scan": "POST /api/nexus/agent/scan {code, filename}",
+                    "aibom": "POST /api/nexus/aibom {code, system_name}",
+                },
+            })
+
         elif path == "/api/nexus/mcp":
             self._json(get_mcp_tools())
 
@@ -606,6 +630,78 @@ class NexusAPIHandler(BaseHTTPRequestHandler):
                 "mutations": result["mutations"],
             })
 
+        elif path == "/api/nexus/injection/scan":
+            # Prompt injection detector
+            text = body.get("text", "")
+            context = body.get("context", "user_input")
+            
+            from nexus_injection import detect_injection, is_safe, sanitize_prompt
+            findings = detect_injection(text, context)
+            safe = is_safe(text)
+            sanitized = sanitize_prompt(text) if not safe else text
+            
+            self._json({
+                "safe": safe,
+                "findings_count": len(findings),
+                "findings": findings,
+                "sanitized": sanitized,
+                "categories_detected": list(set(f["category"] for f in findings)),
+            })
+
+        elif path == "/api/nexus/agent/scan":
+            # AI Agent Security Scanner
+            code = body.get("code", "")
+            filename = body.get("filename", "agent.py")
+            
+            from nexus_agent_scan import scan_agent_code
+            findings = scan_agent_code(code, filename)
+            
+            self._json({
+                "file": filename,
+                "issues_found": len(findings),
+                "critical": sum(1 for f in findings if f["severity"] == "critical"),
+                "high": sum(1 for f in findings if f["severity"] == "high"),
+                "medium": sum(1 for f in findings if f["severity"] == "medium"),
+                "low": sum(1 for f in findings if f["severity"] == "low"),
+                "findings": findings,
+            })
+
+        elif path == "/api/nexus/aibom":
+            # AIBOM Generator — AI Bill of Materials
+            code = body.get("code", "")
+            system_name = body.get("system_name", "AI System")
+            filename = body.get("filename", "agent.py")
+            
+            from nexus_aibom import generate_aibom
+            aibom = generate_aibom(code, filename, system_name)
+            
+            self._json({
+                "aibom": aibom,
+                "risk_score": aibom.get("risk_score", 0),
+                "compliance_summary": {
+                    framework: {
+                        "passing": sum(1 for v in checks.values() if v),
+                        "total": len(checks),
+                    }
+                    for framework, checks in aibom.get("compliance", {}).items()
+                },
+            })
+
+        elif path == "/api/nexus/autofix":
+            # Auto-Fix Pipeline — find → fix → PR → verify
+            repo = body.get("repo", "")
+            branch = body.get("branch", "main")
+            max_fixes = body.get("max_fixes", 5)
+            
+            if not repo:
+                self._json({"error": "repo required"}, 400)
+                return
+            
+            from nexus_autofix import auto_fix_repo
+            result = auto_fix_repo(repo, branch, max_fixes)
+            
+            self._json(result)
+
         else:
             self._json({"error": "Not found", "path": path}, 404)
 
@@ -623,6 +719,10 @@ if __name__ == "__main__":
     print(f"NEXUS Swarm API running on port {port}")
     print(f"Endpoints:")
     print(f"  GET  /api/nexus/health")
+    print(f"  POST /api/nexus/injection/scan  — Prompt Injection Detector")
+    print(f"  POST /api/nexus/agent/scan     — AI Agent Security Scanner")
+    print(f"  POST /api/nexus/aibom          — AIBOM Generator")
+    print(f"  POST /api/nexus/autofix        — Auto-Fix Pipeline")
     print(f"  GET  /api/nexus/agents")
     print(f"  POST /api/nexus/analyze")
     print(f"  POST /api/nexus/github")

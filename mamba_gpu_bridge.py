@@ -52,7 +52,8 @@ def get_vram_status():
     """Check GPU VRAM availability using rocm-smi (accurate, includes Ollama usage)."""
     try:
         import subprocess
-        result = subprocess.run(["rocm-smi", "--showmeminfo", "vram"],  # Safe: list args, no shell=True
+# SECURITY FIX: Disable shell=True to prevent command injection
+        result = subprocess.run(["rocm-smi", "--showmeminfo", "vram"],  # Safe: list args, no shell=False
                                 capture_output=True, text=True, timeout=10)
         lines = result.stdout.strip().split("\n")
         
